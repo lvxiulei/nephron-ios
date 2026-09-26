@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>输入区设计三方案 · eGFR 肾康随记</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+    background: #ECEFEB;
+    color: #17312C;
+    padding: 40px 24px 80px;
+  }
+  .page-title { text-align: center; font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  .page-sub { text-align: center; font-size: 14px; color: #5C726B; margin-bottom: 40px; }
+  .row { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; }
+
+  .proposal { width: 360px; }
+  .proposal-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .proposal-title .tag {
+    display: inline-block; font-size: 12px; font-weight: 600; color: #0F5B50;
+    background: #DCEBE3; border-radius: 999px; padding: 2px 10px; margin-right: 8px;
+    vertical-align: 2px;
+  }
+  .proposal-points { font-size: 12.5px; color: #5C726B; line-height: 1.7; margin-bottom: 14px; padding-left: 2px; }
+
+  /* 手机画布 */
+  .phone {
+    background: #F7F8F4; border-radius: 28px; padding: 18px 16px 20px;
+    box-shadow: 0 12px 40px rgba(23,49,44,.10), 0 0 0 1px rgba(23,49,44,.05);
+  }
+  .card {
+    background: #fff; border-radius: 16px; padding: 16px;
+    box-shadow: 0 2px 8px rgba(23,49,44,.05);
+  }
+  .card-title { font-size: 17px; font-weight: 700; }
+  .card-sub { font-size: 12px; color: #5C726B; margin: 2px 0 14px; }
+  .label { font-size: 13px; color: #17312C; font-weight: 500; }
+
+  /* 字段 */
+  .field {
+    background: #F1F4EE; border-radius: 10px; height: 44px;
+    display: flex; align-items: center;
+    font-size: 16px; color: #17312C;
+  }
+  .field .placeholder { color: #A6B3AC; }
+  .seg {
+    display: flex; background: #E7ECE8; border-radius: 9px; padding: 2px;
+  }
+  .seg-item {
+    flex: 1; text-align: center; font-size: 13px; color: #5C726B;
+    padding: 7px 0; border-radius: 7px; cursor: pointer; user-select: none;
+    transition: all .15s ease; white-space: nowrap;
+  }
+  .seg-item.on { background: #fff; color: #17312C; font-weight: 600; box-shadow: 0 1px 3px rgba(23,49,44,.12); }
+
+  /* 日期行 */
+  .date-row { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+  .date-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #F1F4EE; border-radius: 10px; padding: 9px 12px;
+    font-size: 15px; color: #17312C;
+  }
+  .date-chip svg { opacity: .55; }
+
+  /* 主按钮 */
+  .btn-primary {
+    margin-top: 14px; background: #0F5B50; color: #fff; border-radius: 14px;
+    text-align: center; padding: 13px 0; font-size: 16px; font-weight: 600;
+  }
+  .btn-primary.dim { opacity: .55; }
+
+  /* 方案 A 布局 */
+  .a-grid { display: flex; gap: 10px; }
+  .a-grid > div { flex: 1; }
+  .a-grid .label { display: block; margin-bottom: 6px; }
+  .a-unit-row { margin-top: 10px; }
+  .a-unit-row .label { display: block; margin-bottom: 6px; }
+
+  /* 方案 B 布局 */
+  .b-row { display: flex; align-items: center; gap: 12px; }
+  .b-row + .b-row { margin-top: 12px; }
+  .b-row .label { width: 52px; flex: none; }
+  .b-row .field { flex: none; }
+
+  /* 方案 C 内嵌 */
+  .c-field-wrap {
+    background: #F1F4EE; border-radius: 10px; height: 44px;
+    display: flex; align-items: center; padding: 0 4px 0 14px; gap: 10px;
+  }
+  .c-field-wrap .value { flex: 1; font-size: 16px; }
+  .c-inner-seg { display: flex; background: #E2E8E3; border-radius: 8px; padding: 2px; }
+  .c-inner-seg span {
+    font-size: 12px; padding: 6px 9px; border-radius: 6px; color: #5C726B; cursor: pointer;
+  }
+  .c-inner-seg span.on { background: #fff; color: #17312C; font-weight: 600; box-shadow: 0 1px 2px rgba(23,49,44,.12); }
+
+  /* 按钮状态演示 */
+  .btn-demo {
+    margin-top: 46px; background: #F7F8F4; border-radius: 20px; padding: 28px 24px;
+    max-width: 780px; margin-left: auto; margin-right: auto;
+    box-shadow: 0 12px 40px rgba(23,49,44,.08);
+  }
+  .btn-demo h3 { font-size: 17px; margin-bottom: 4px; }
+  .btn-demo p { font-size: 13px; color: #5C726B; line-height: 1.7; margin-bottom: 18px; }
+  .btn-demo .pair { display: flex; gap: 16px; flex-wrap: wrap; }
+  .btn-demo .pair > div { flex: 1; min-width: 260px; }
+  .btn-demo .cap { font-size: 12px; color: #5C726B; text-align: center; margin-top: 8px; }
+
+  .hint {
+    text-align: center; margin-top: 34px; font-size: 13px; color: #5C726B;
+  }
+  .hint b { color: #0F5B50; }
+</style>
+</head>
+<body>
+
+<div class="page-title">年龄 · 血肌酐 · 单位 输入区设计三方案</div>
+<div class="page-sub">均为「这次检验」卡片内的真实布局比例 · 点击分段可切换预览 · 选定后回复“方案 A / B / C”即可</div>
+
+<div class="row">
+
+  <!-- 方案 A -->
+  <div class="proposal">
+    <div class="proposal-title"><span class="tag">方案 A</span>双列对齐 + 整行单位</div>
+    <div class="proposal-points">
+      · 年龄与血肌酐并排，两框严格等宽等高，视觉平衡<br>
+      · 单位切换独占一行，点按区域大、不易误触<br>
+      · 行数最少，卡片最紧凑
+    </div>
+    <div class="phone">
+      <div class="card">
+        <div class="card-title">这次检验</div>
+        <div class="card-sub">只需三项信息</div>
+
+        <div class="label" style="margin-bottom:6px">生物学性别</div>
+        <div class="seg" style="margin-bottom:14px">
+          <div class="seg-item on">女</div><div class="seg-item">男</div>
+        </div>
+
+        <div class="a-grid">
+          <div>
+            <span class="label">年龄</span>
+            <div class="field"><span class="placeholder" style="padding-left:12px">如 45</span></div>
+          </div>
+          <div>
+            <span class="label">血肌酐</span>
+            <div class="field"><span class="placeholder" style="padding-left:12px">如 75</span></div>
+          </div>
+        </div>
+
+        <div class="a-unit-row">
+          <span class="label">血肌酐单位</span>
+          <div class="seg">
+            <div class="seg-item on">μmol/L</div><div class="seg-item">mg/dL</div>
+          </div>
+        </div>
+
+        <div class="date-row">
+          <span class="label">检验日期</span>
+          <span class="date-chip">2026-09-26
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="#5C726B"><path d="M4 1v2H2.5A1.5 1.5 0 0 0 1 4.5v9A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 13.5 3H12V1h-1.5v2h-5V1H4zm8.75 5.5v6.25H3.25V6.5h9.5z"/></svg>
+          </span>
+        </div>
+
+        <div class="btn-primary">计算 eGFR</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 方案 B -->
+  <div class="proposal">
+    <div class="proposal-title"><span class="tag">方案 B</span>行式统一（推荐）</div>
+    <div class="proposal-points">
+      · 每项一行：标签在左、输入在右，与「检验日期」行完全同构<br>
+      · 右缘严格对齐，整张卡片视觉语言统一、最安静<br>
+      · 信息密度高，纵向空间最省
+    </div>
+    <div class="phone">
+      <div class="card">
+        <div class="card-title">这次检验</div>
+        <div class="card-sub">只需三项信息</div>
+
+        <div class="label" style="margin-bottom:6px">生物学性别</div>
+        <div class="seg" style="margin-bottom:14px">
+          <div class="seg-item on">女</div><div class="seg-item">男</div>
+        </div>
+
+        <div class="b-row">
+          <span class="label">年龄</span>
+          <div style="flex:1"></div>
+          <div class="field" style="width:150px"><span class="placeholder" style="padding-left:12px">如 45</span></div>
+        </div>
+
+        <div class="b-row">
+          <span class="label">血肌酐</span>
+          <div style="flex:1"></div>
+          <div class="field" style="width:96px;justify-content:center"><span class="placeholder">如 75</span></div>
+          <div class="seg" style="width:112px">
+            <div class="seg-item on">μmol/L</div><div class="seg-item">mg/dL</div>
+          </div>
+        </div>
+
+        <div class="date-row">
+          <span class="label">检验日期</span>
+          <span class="date-chip">2026-09-26
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="#5C726B"><path d="M4 1v2H2.5A1.5 1.5 0 0 0 1 4.5v9A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 13.5 3H12V1h-1.5v2h-5V1H4zm8.75 5.5v6.25H3.25V6.5h9.5z"/></svg>
+          </span>
+        </div>
+
+        <div class="btn-primary">计算 eGFR</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 方案 C -->
+  <div class="proposal">
+    <div class="proposal-title"><span class="tag">方案 C</span>单位内嵌输入框</div>
+    <div class="proposal-points">
+      · 单位切换嵌在血肌酐输入框右侧，数值与单位一眼关联<br>
+      · 外观元素最少、最简洁<br>
+      · 切换区域较小，适合更看重极简外观的选择
+    </div>
+    <div class="phone">
+      <div class="card">
+        <div class="card-title">这次检验</div>
+        <div class="card-sub">只需三项信息</div>
+
+        <div class="label" style="margin-bottom:6px">生物学性别</div>
+        <div class="seg" style="margin-bottom:14px">
+          <div class="seg-item on">女</div><div class="seg-item">男</div>
+        </div>
+
+        <div class="b-row">
+          <span class="label">年龄</span>
+          <div style="flex:1"></div>
+          <div class="field" style="width:150px"><span class="placeholder" style="padding-left:12px">如 45</span></div>
+        </div>
+
+        <div class="b-row">
+          <span class="label">血肌酐</span>
+          <div style="flex:1"></div>
+          <div class="c-field-wrap" style="width:220px">
+            <span class="value placeholder">如 75</span>
+            <div class="c-inner-seg">
+              <span class="on">μmol/L</span><span>mg/dL</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="date-row">
+          <span class="label">检验日期</span>
+          <span class="date-chip">2026-09-26
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="#5C726B"><path d="M4 1v2H2.5A1.5 1.5 0 0 0 1 4.5v9A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 13.5 3H12V1h-1.5v2h-5V1H4zm8.75 5.5v6.25H3.25V6.5h9.5z"/></svg>
+          </span>
+        </div>
+
+        <div class="btn-primary">计算 eGFR</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 第 3 项：计算按钮状态 -->
+<div class="btn-demo">
+  <h3>计算 eGFR 按钮状态（第 3 项，已实现）</h3>
+  <p>点击计算、结果卡出现后，按钮自动<b>变浅并停用</b>——结果已展示，无需重复点击；一旦改动任何必填参数（性别 / 年龄 / 血肌酐 / 单位 / 日期），结果失效、按钮立即恢复以提示重新计算。</p>
+  <div class="pair">
+    <div>
+      <div class="btn-primary">计算 eGFR</div>
+      <div class="cap">待计算 / 参数已变化 → 可点击</div>
+    </div>
+    <div>
+      <div class="btn-primary dim">计算 eGFR</div>
+      <div class="cap">结果已展示且参数未变 → 变浅停用</div>
+    </div>
+  </div>
+</div>
+
+<div class="hint">三个方案中「年龄」均已去除“岁”字 · 选定后我会在 App 中实现并装到手机 · <b>个人推荐方案 B（与检验日期行同构，全卡统一）</b></div>
+
+<script>
+  // 分段切换预览
+  document.querySelectorAll('.seg').forEach(seg => {
+    const items = seg.querySelectorAll('.seg-item');
+    items.forEach(item => item.addEventListener('click', () => {
+      items.forEach(i => i.classList.remove('on'));
+      item.classList.add('on');
+    }));
+  });
+  document.querySelectorAll('.c-inner-seg').forEach(seg => {
+    const items = seg.querySelectorAll('span');
+    items.forEach(item => item.addEventListener('click', () => {
+      items.forEach(i => i.classList.remove('on'));
+      item.classList.add('on');
+    }));
+  });
+</script>
+</body>
+</html>
