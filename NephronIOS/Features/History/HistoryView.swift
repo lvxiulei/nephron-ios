@@ -1,12 +1,68 @@
 import SwiftUI
+import SwiftData
+
+/// 删除确认流程状态。
+/// 注意：必须放在 @Observable 类里、由独立子层呈现，而不是 HistoryView 的 @State——
+/// 左滑收拢期间变更持有 List 的视图的 @State 会让 List 重算并把滚动位置重置回
+/// 顶部（整页跳动）。HistoryView 的 body 不读取本类属性，点删除按钮时就不会重算。
+@Observable @MainActor
+private final class DeleteFlow {
+    var pending: RecordModel?
+    var showsConfirm = false
+    var errorText: String?
+    var showsError = false
+
+    func request(_ record: RecordModel) {
+        pending = record
+        showsConfirm = true
+    }
+
+    func cancel() {
+        showsConfirm = false
+        pending = nil
+    }
+}
+
+/// 只承载删除确认弹框的独立呈现层，不包含列表。
+private struct DeleteConfirmLayer: View {
+    @Bindable var flow: DeleteFlow
+    let onDelete: (RecordModel) -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        Color.clear
+            .alert("删除这条记录？", isPresented: $flow.showsConfirm) {
+                Button("删除", role: .destructive) {
+                    flow.showsConfirm = false
+                    if let record = flow.pending {
+                        flow.pending = nil
+                        onDelete(record)
+                    }
+                }
+                Button("取消", role: .cancel) {
+                    flow.cancel()
+                }
+            }
+            .alert("删除失败", isPresented: $flow.showsError) {
+                Button("我知道了", role: .cancel) {
+                    flow.showsError = false
+                }
+            } message: {
+                Text(flow.errorText ?? "")
+            }
+            // 确认框关闭后再收起行内展开的删除按钮：与弹框呈现同帧重算会取消呈现
+            .onChange(of: flow.showsConfirm) { _, shows in
+                if !shows { onDismiss() }
+            }
+    }
+}
 
 /// 记录 Tab：双摘要 + eGFR 趋势 + 记录列表（删除带确认）+ 空状态。
 struct HistoryView: View {
     @Environment(RecordStore.self) private var store
     @Environment(\.switchTab) private var switchTab
-    @State private var recordPendingDelete: RecordModel?
-    @State private var deleteErrorText: String?
-    @State private var showsDeleteError = false
+    @State private var deleteFlow = DeleteFlow()
+    @State private var openRecordID: PersistentIdentifier?
 
     var body: some View {
         Group {
@@ -22,24 +78,16 @@ struct HistoryView: View {
         }
         // 删除记录等数量变化时的轻微触感
         .sensoryFeedback(.impact(weight: .light), trigger: store.recordCount)
-        .alert(
-            "删除这条记录？",
-            isPresented: Binding(
-                get: { recordPendingDelete != nil },
-                set: { if !$0 { recordPendingDelete = nil } }
+        .background {
+            DeleteConfirmLayer(
+                flow: deleteFlow,
+                onDelete: { record in deleteRecord(record) },
+                onDismiss: {
+                    withAnimation(.smooth(duration: 0.2)) {
+                        openRecordID = nil
+                    }
+                }
             )
-        ) {
-            Button("删除", role: .destructive) {
-                deletePending()
-            }
-            Button("取消", role: .cancel) {
-                recordPendingDelete = nil
-            }
-        }
-        .alert("删除失败", isPresented: $showsDeleteError) {
-            Button("我知道了", role: .cancel) {}
-        } message: {
-            Text(deleteErrorText ?? "")
         }
     }
 
@@ -71,17 +119,17 @@ struct HistoryView: View {
             Section {
                 // 存储层按日期正序（供趋势图从左到右递增）；列表展示反转：最新在前，
                 // 同日多条时创建最晚的在前
-                ForEach(store.records.reversed(), id: \.persistentModelID) { record in
-                    recordRow(record)
-                        .listRowBackground(Palette.card)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                recordPendingDelete = record
-                            } label: {
-                                Image(systemName: "trash")
-                            }
-                            .accessibilityLabel("删除")
-                        }
+                    ForEach(store.records.reversed(), id: \.persistentModelID) { record in
+                    RecordSwipeRow(
+                        record: record,
+                        openRecordID: $openRecordID,
+                        onDeleteRequest: { deleteFlow.request(record) }
+                    )
+                    .listRowBackground(Palette.card)
+                    .accessibilityHint("左滑可删除")
+                    .accessibilityAction(named: "删除") {
+                        deleteFlow.request(record)
+                    }
                 }
             }
         }
@@ -149,8 +197,73 @@ struct HistoryView: View {
 
     // MARK: 记录列表
 
-    /// 行内容：检验信息 / eGFR（删除通过左滑操作）。
-    private func recordRow(_ record: RecordModel) -> some View {
+    private func deleteRecord(_ record: RecordModel) {
+        do {
+            try store.deleteRecord(record)
+        } catch {
+            deleteFlow.errorText = (error as? StorageError)?.errorDescription ?? StorageError.deleteFailed.errorDescription
+            deleteFlow.showsError = true
+        }
+    }
+}
+
+/// 单条记录行：检验信息 / eGFR，自绘左滑露出删除按钮。
+/// 不用系统 swipeActions：iOS 26/27 上点击其按钮会让 List 重载并把滚动位置
+/// 重置回顶部（整页跳动）；自绘滑动露出的普通按钮无此问题（已用帧采样探针验证）。
+private struct RecordSwipeRow: View {
+    let record: RecordModel
+    @Binding var openRecordID: PersistentIdentifier?
+    let onDeleteRequest: () -> Void
+
+    @State private var offsetX: CGFloat = 0
+    private let revealWidth: CGFloat = 64
+
+    private var isOpen: Bool { openRecordID == record.persistentModelID }
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            // 仅在露出期间渲染删除按钮：收起的行不能存在被遮挡的按钮元素，
+            // 否则可达性树里会出现多个“删除”，点击与 VoiceOver 都无法定位
+            if offsetX < -0.5 {
+                Button {
+                    onDeleteRequest()
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.white)
+                        .frame(width: revealWidth - 8)
+                        .frame(maxHeight: .infinity)
+                        .background(Color.red, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("删除")
+            }
+
+            rowContent
+                .background(Palette.card, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .offset(x: offsetX)
+                .simultaneousGesture(revealGesture)
+                .onTapGesture {
+                    // 点击任意行收起当前展开的删除按钮
+                    if openRecordID != nil {
+                        withAnimation(.smooth(duration: 0.2)) {
+                            openRecordID = nil
+                        }
+                    }
+                }
+                .onChange(of: openRecordID) { _, newID in
+                    if newID != record.persistentModelID, offsetX != 0 {
+                        withAnimation(.smooth(duration: 0.2)) {
+                            offsetX = 0
+                        }
+                    }
+                }
+        }
+        // 与系统左滑一致：内容滑出在卡片边缘裁切，而不是屏幕边缘
+        .clipped()
+    }
+
+    private var rowContent: some View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(DayDate.displayFormatter.string(from: record.measuredOn))
@@ -173,17 +286,28 @@ struct HistoryView: View {
                 .accessibilityLabel("eGFR \(EGFRCalculator.formattedNumber(record.egfr))")
         }
         .padding(.vertical, 4)
-        .accessibilityHint("左滑可删除")
     }
 
-    private func deletePending() {
-        guard let record = recordPendingDelete else { return }
-        recordPendingDelete = nil
-        do {
-            try store.deleteRecord(record)
-        } catch {
-            deleteErrorText = (error as? StorageError)?.errorDescription ?? StorageError.deleteFailed.errorDescription
-            showsDeleteError = true
-        }
+    /// 横向拖拽露出/收起删除按钮；纵向交给 List 滚动。
+    private var revealGesture: some Gesture {
+        DragGesture(minimumDistance: 12)
+            .onChanged { value in
+                guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                let base: CGFloat = isOpen ? -revealWidth : 0
+                offsetX = min(0, max(-revealWidth, base + value.translation.width))
+            }
+            .onEnded { value in
+                let shouldOpen = value.predictedEndTranslation.width < -revealWidth * 0.6
+                    || value.translation.width < -24
+                withAnimation(.smooth(duration: 0.22)) {
+                    if shouldOpen {
+                        openRecordID = record.persistentModelID
+                        offsetX = -revealWidth
+                    } else {
+                        openRecordID = nil
+                        offsetX = 0
+                    }
+                }
+            }
     }
 }

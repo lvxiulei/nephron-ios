@@ -238,6 +238,222 @@ final class NephronIOSUITests: XCTestCase {
         XCTAssertTrue(anyTooltip.waitForExistence(timeout: 5), "长按后未出现选中提示卡")
     }
 
+    /// 左滑删除：弹框出现期间记录行不得发生滚动跳变或顺序互换（紧凑采样 + 滚动深度场景）。
+    @MainActor func testSwipeDeleteDialogKeepsRowsStable() throws {
+        let app = launchClean(["-uitest-seed-demo", "-uitest-tab=1"])
+        XCTAssertTrue(app.staticTexts["已记录次数"].waitForExistence(timeout: 8))
+
+        let dayFormatter = DateFormatter()
+        dayFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dayFormatter.dateFormat = "yyyy-MM-dd"
+        func dateText(_ daysAgo: Int) -> String {
+            let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date())!
+            return dayFormatter.string(from: date)
+        }
+
+        let target = app.staticTexts[dateText(7)]
+        if !target.waitForExistence(timeout: 5) {
+            print("===DUMP-BEGIN===\n\(app.debugDescription)\n===DUMP-END===")
+            XCTFail("目标记录行未出现：\(dateText(7))")
+        }
+        let oldest = app.staticTexts[dateText(30)]
+        XCTAssertTrue(oldest.exists, "最旧记录行未出现：\(dateText(30))")
+        let summary = app.staticTexts["已记录次数"]
+
+        // 制造滚动深度：先滚到目标行，再整屏上滑一次，然后修正回目标行可见
+        scrollToVisible(target, in: app)
+        app.swipeUp()
+        usleep(300_000)
+        scrollToVisible(target, in: app)
+        usleep(400_000)
+
+        // 摘要卡滚出屏外后 List 会将其移出可达性树。判定列表是否“跳回顶部”要看
+        // 摘要卡是否真正进入可视区：弹框呈现时系统可能实例化屏幕外的单元格
+        //（不出现在画面上），只看“是否存在于可达性树”会误判。
+        func summaryVisible() -> Bool {
+            guard summary.exists else { return false }
+            let frame = summary.frame
+            return frame.maxY > 0 && frame.minY < 780
+        }
+
+        let baseTargetY = target.frame.minY
+        let baseOldestY = oldest.frame.minY
+        XCTAssertFalse(summaryVisible(), "前置条件不满足：摘要卡仍可见，无滚动深度")
+
+        target.swipeLeft()
+        usleep(500_000)
+        let trashButton = app.buttons["删除"].firstMatch
+        XCTAssertTrue(trashButton.waitForExistence(timeout: 3), "左滑后未出现删除按钮")
+        trashButton.tap()
+        XCTAssertTrue(app.staticTexts["删除这条记录？"].waitForExistence(timeout: 3), "删除确认弹框未出现")
+
+        // 紧凑采样两行日期的纵向轨迹：一起平移＝滚动跳变，互换＝重排
+        var samples: [String] = []
+        var maxTargetDelta: CGFloat = 0
+        var maxOldestDelta: CGFloat = 0
+        var summaryCameVisible = false
+        for _ in 0..<24 {
+            let targetY = target.frame.minY
+            let oldestY = oldest.frame.minY
+            maxTargetDelta = max(maxTargetDelta, abs(targetY - baseTargetY))
+            maxOldestDelta = max(maxOldestDelta, abs(oldestY - baseOldestY))
+            if summaryVisible() { summaryCameVisible = true }
+            samples.append("t=\(Int(targetY)),o=\(Int(oldestY))")
+            usleep(30_000)
+        }
+        print("===PROBE=== base t=\(Int(baseTargetY)),o=\(Int(baseOldestY)) \(samples.joined(separator: " | "))")
+
+        app.buttons["取消"].tap()
+        usleep(400_000)
+        var afterSamples: [String] = []
+        for _ in 0..<8 {
+            afterSamples.append("t=\(Int(target.frame.minY)),o=\(Int(oldest.frame.minY))")
+            usleep(50_000)
+        }
+        print("===PROBE-AFTER-CANCEL=== \(afterSamples.joined(separator: " | "))")
+
+        XCTAssertFalse(summaryCameVisible, "弹框出现时摘要卡回到可视区＝列表滚动被重置回顶部：\(samples)")
+
+        XCTAssertLessThanOrEqual(
+            maxTargetDelta, 3,
+            "弹框出现期间目标行纵向跳动 \(maxTargetDelta)pt：\(samples) 取消后：\(afterSamples)"
+        )
+        XCTAssertLessThanOrEqual(
+            maxOldestDelta, 3,
+            "弹框出现期间最旧行纵向跳动 \(maxOldestDelta)pt：\(samples) 取消后：\(afterSamples)"
+        )
+        XCTAssertEqual(target.frame.minY, baseTargetY, accuracy: 3, "取消弹框后目标行未回到原位")
+        XCTAssertEqual(oldest.frame.minY, baseOldestY, accuracy: 3, "取消弹框后最旧行未回到原位")
+    }
+
+    /// 截图驱动：按环境变量 SCREENSHOT_MODE（light / dark / large）附加启动参数，
+    /// 停留在“删除按钮展开”“确认弹框弹出”两种状态，供并行 simctl 截屏抓取。
+    @MainActor func testScreenshotDriverDeleteStates() throws {
+        var args = ["-uitest-seed-demo", "-uitest-tab=1"]
+        let mode = ProcessInfo.processInfo.environment["SCREENSHOT_MODE"] ?? "light"
+        if mode == "dark" { args += ["-uitest-force-dark"] }
+        if mode == "large" { args += ["-uitest-force-large-text"] }
+        let app = XCUIApplication()
+        app.launchArguments = ["-uitest-in-memory", "-uitest-reset"] + args
+        app.launch()
+
+        let dayFormatter = DateFormatter()
+        dayFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dayFormatter.dateFormat = "yyyy-MM-dd"
+        func dateText(_ daysAgo: Int) -> String {
+            let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date())!
+            return dayFormatter.string(from: date)
+        }
+        XCTAssertTrue(app.staticTexts["已记录次数"].waitForExistence(timeout: 8), "截图驱动：记录页未出现")
+
+        // 滚动后选一条基本可见的记录行：不压顶、不进悬浮 Tab 栏区。
+        // 用坐标拖拽而非 app.swipeUp()：大字体下趋势图占据屏幕中部，
+        // swipeUp 起笔落在图表的拖拽手势上，列表不会滚动。
+        let bottomLimit: CGFloat = mode == "large" ? 726 : 700
+        let window = app.windows.firstMatch
+        var swipeTarget: XCUIElement?
+        for _ in 0..<8 where swipeTarget == nil {
+            let start = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.80))
+            let end = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25))
+            start.press(forDuration: 0.1, thenDragTo: end)
+            usleep(400_000)
+            for days in [1, 7, 14, 21, 30] {
+                let row = app.staticTexts[dateText(days)]
+                if row.exists && row.frame.height > 0 && row.frame.minY > 90 && row.frame.maxY < bottomLimit {
+                    swipeTarget = row
+                    break
+                }
+            }
+        }
+        guard let target = swipeTarget else {
+            var dump = ""
+            for days in [1, 7, 14, 21, 30] {
+                let row = app.staticTexts[dateText(days)]
+                if row.exists {
+                    dump += "[\(dateText(days)) y=\(Int(row.frame.minY))..\(Int(row.frame.maxY))] "
+                } else {
+                    dump += "[\(dateText(days)) 不存在] "
+                }
+            }
+            print("===SHOT-DUMP=== \(dump)")
+            XCTFail("截图驱动：无基本可见的记录行")
+            return
+        }
+
+        usleep(600_000)
+        target.swipeLeft()
+        usleep(1_500_000)  // 展开态停留，供截屏
+        let trashButton = app.buttons["删除"].firstMatch
+        XCTAssertTrue(trashButton.waitForExistence(timeout: 3), "截图驱动：未露出删除按钮")
+        trashButton.tap()
+        XCTAssertTrue(app.staticTexts["删除这条记录？"].waitForExistence(timeout: 3), "截图驱动：弹框未出现")
+        usleep(2_500_000)  // 弹框态停留，供截屏
+        app.buttons["取消"].tap()
+        usleep(1_000_000)
+    }
+
+    /// 对照诊断：左滑后不点删除、点别处收起滑动（无弹框无状态变化），列表是否仍跳动。
+    @MainActor func testSwipeCloseWithoutAlertKeepsRowsStable() throws {
+        let app = launchClean(["-uitest-seed-demo", "-uitest-tab=1"])
+        XCTAssertTrue(app.staticTexts["已记录次数"].waitForExistence(timeout: 8))
+
+        let dayFormatter = DateFormatter()
+        dayFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dayFormatter.dateFormat = "yyyy-MM-dd"
+        func dateText(_ daysAgo: Int) -> String {
+            let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date())!
+            return dayFormatter.string(from: date)
+        }
+
+        let target = app.staticTexts[dateText(7)]
+        XCTAssertTrue(target.waitForExistence(timeout: 5), "目标记录行未出现")
+        let oldest = app.staticTexts[dateText(30)]
+        XCTAssertTrue(oldest.exists, "最旧记录行未出现")
+        let summary = app.staticTexts["已记录次数"]
+        func summaryVisible() -> Bool {
+            guard summary.exists else { return false }
+            let frame = summary.frame
+            return frame.maxY > 0 && frame.minY < 780
+        }
+
+        scrollToVisible(target, in: app)
+        app.swipeUp()
+        usleep(300_000)
+        scrollToVisible(target, in: app)
+        usleep(400_000)
+
+        let baseTargetY = target.frame.minY
+        let baseOldestY = oldest.frame.minY
+        XCTAssertFalse(summaryVisible(), "前置条件不满足：摘要卡仍可见，无滚动深度")
+
+        target.swipeLeft()
+        usleep(500_000)
+        let rowDelete = app.buttons["删除"].firstMatch
+        XCTAssertTrue(rowDelete.waitForExistence(timeout: 3), "左滑后未露出删除按钮")
+        // 点另一行收起展开的删除按钮：不触发确认弹框
+        oldest.tap()
+        usleep(300_000)
+
+        var samples: [String] = []
+        var maxTargetDelta: CGFloat = 0
+        var maxOldestDelta: CGFloat = 0
+        var summaryCameVisible = false
+        for _ in 0..<12 {
+            let targetY = target.frame.minY
+            let oldestY = oldest.frame.minY
+            maxTargetDelta = max(maxTargetDelta, abs(targetY - baseTargetY))
+            maxOldestDelta = max(maxOldestDelta, abs(oldestY - baseOldestY))
+            if summaryVisible() { summaryCameVisible = true }
+            samples.append("t=\(Int(targetY)),o=\(Int(oldestY))")
+            usleep(50_000)
+        }
+        print("===PROBE-CLOSE-ONLY=== base t=\(Int(baseTargetY)),o=\(Int(baseOldestY)) \(samples.joined(separator: " | "))")
+
+        XCTAssertFalse(summaryCameVisible, "仅收起滑动也会重置滚动：\(samples)")
+        XCTAssertLessThanOrEqual(maxTargetDelta, 3, "仅收起滑动目标行也跳动：\(samples)")
+        XCTAssertLessThanOrEqual(maxOldestDelta, 3, "仅收起滑动最旧行也跳动：\(samples)")
+    }
+
     @MainActor private func changeCreatinine(_ app: XCUIApplication, to newValue: String) {
         let creatinineField = app.textFields["calculator.creatinine.field"]
         XCTAssertTrue(creatinineField.waitForExistence(timeout: 5))
