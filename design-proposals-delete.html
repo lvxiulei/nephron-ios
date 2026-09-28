@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>记录删除交互 · 三方案 · eGFR 肾康随记</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  body { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; background: #ECEFEB; color: #17312C; padding: 40px 24px 90px; }
+  .page-title { text-align: center; font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  .page-sub { text-align: center; font-size: 14px; color: #5C726B; margin-bottom: 34px; line-height: 1.7; }
+  .row { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; }
+  .proposal { width: 372px; }
+  .proposal-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .proposal-title .tag { display: inline-block; font-size: 12px; font-weight: 600; color: #0F5B50; background: #DCEBE3; border-radius: 999px; padding: 2px 10px; margin-right: 8px; vertical-align: 2px; }
+  .proposal-points { font-size: 12.5px; color: #5C726B; line-height: 1.7; margin-bottom: 14px; padding-left: 2px; }
+
+  .phone { background: #F7F8F4; border-radius: 24px; padding: 16px 14px 18px; box-shadow: 0 12px 40px rgba(23,49,44,.10), 0 0 0 1px rgba(23,49,44,.05); position: relative; min-height: 430px; }
+  .sum { display: flex; gap: 10px; margin-bottom: 12px; }
+  .sum > div { flex: 1; background: #fff; border-radius: 12px; padding: 10px 12px; box-shadow: 0 2px 8px rgba(23,49,44,.05); }
+  .sum .t { font-size: 11px; color: #5C726B; }
+  .sum .v { font-size: 18px; font-weight: 700; }
+
+  .list-title { font-size: 15px; font-weight: 700; margin: 2px 2px 8px; }
+
+  /* 可滑动行 */
+  .swipe-wrap { position: relative; border-radius: 14px; overflow: hidden; margin-bottom: 10px; background: #fff; box-shadow: 0 2px 8px rgba(23,49,44,.05); }
+  .swipe-under { position: absolute; inset: 0; display: flex; justify-content: flex-end; align-items: stretch; }
+  .del-btn { width: 76px; background: #D92D20; color: #fff; display: flex; flex-direction: column; gap: 3px; align-items: center; justify-content: center; font-size: 12px; border: none; cursor: pointer; }
+  .del-btn svg { width: 20px; height: 20px; fill: #fff; }
+  .swipe-row { position: relative; background: #fff; padding: 12px 14px; display: flex; align-items: center; gap: 10px; cursor: grab; touch-action: pan-y; user-select: none; transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+  .swipe-row:active { cursor: grabbing; }
+  .rec-date { font-size: 13.5px; font-weight: 600; }
+  .rec-cr { font-size: 11.5px; color: #5C726B; margin-top: 3px; }
+  .rec-egfr { margin-left: auto; text-align: right; }
+  .rec-egfr .n { font-size: 16px; font-weight: 700; color: #0F5B50; }
+  .rec-egfr .u { font-size: 10px; color: #5C726B; }
+
+  /* 系统列表样式（方案A） */
+  .syslist { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(23,49,44,.05); }
+  .sys-row { position: relative; }
+  .sys-row + .sys-row { border-top: .5px solid #E3E8E0; }
+
+  /* 确认弹窗 */
+  .dialog-mask { position: absolute; inset: 0; background: rgba(0,0,0,.32); border-radius: 24px; display: none; align-items: center; justify-content: center; z-index: 5; }
+  .dialog-mask.show { display: flex; }
+  .dialog { background: #F4F5F7; border-radius: 14px; width: 270px; overflow: hidden; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+  .dialog .dt { font-size: 15px; font-weight: 600; padding: 16px 18px 6px; }
+  .dialog .dm { font-size: 12.5px; color: #5C726B; padding: 0 20px 14px; line-height: 1.5; }
+  .dialog .db { border-top: .5px solid #C9CDD4; display: flex; flex-direction: column; width: 100%; }
+  .dialog .db button { border: none; background: none; font-size: 15px; padding: 12px 0; cursor: pointer; }
+  .dialog .db .danger { color: #D92D20; font-weight: 600; border-top: .5px solid #C9CDD4; }
+
+  /* 撤销横幅（方案C） */
+  .undo { position: absolute; left: 14px; right: 14px; bottom: 16px; background: #17312C; color: #fff; border-radius: 12px; padding: 11px 14px; font-size: 13px; display: none; align-items: center; justify-content: space-between; box-shadow: 0 8px 24px rgba(23,49,44,.35); z-index: 6; }
+  .undo.show { display: flex; animation: up .25s ease; }
+  @keyframes up { from { transform: translateY(16px); opacity: 0; } }
+  .undo button { border: none; background: none; color: #7BD0B5; font-weight: 700; font-size: 13px; cursor: pointer; }
+
+  .tip { text-align: center; font-size: 12px; color: #8A9B93; margin-top: 10px; }
+
+  .compare { max-width: 830px; margin: 46px auto 0; background: #fff; border-radius: 18px; padding: 26px 28px; box-shadow: 0 12px 40px rgba(23,49,44,.08); }
+  .compare h3 { font-size: 17px; margin-bottom: 14px; }
+  .compare table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .compare th, .compare td { padding: 9px 10px; text-align: left; border-bottom: 1px solid #E3E8E0; }
+  .compare th { color: #5C726B; font-weight: 600; font-size: 12px; }
+  .compare td:first-child { font-weight: 600; }
+  .good { color: #0F5B50; } .bad { color: #B3261E; } .mid { color: #8A6D00; }
+  .hint { text-align: center; margin-top: 30px; font-size: 13px; color: #5C726B; }
+  .hint b { color: #0F5B50; }
+</style>
+</head>
+<body>
+
+<div class="page-title">记录删除交互 · 三种方案</div>
+<div class="page-sub">行尾的垃圾桶图标全部移除，改为<b>左滑操作</b>（iOS 主流手势）。三个方案的区别在滑动后的确认方式与视觉呈现。<br>下方每张手机里的记录行都<b>可以真的用鼠标/手指左滑</b>体验。</div>
+
+<div class="row">
+
+  <!-- 方案 A -->
+  <div class="proposal">
+    <div class="proposal-title"><span class="tag">方案 A</span>系统列表 + 标准左滑（最原生）</div>
+    <div class="proposal-points">
+      · 记录列表迁移为系统 List（分组圆角样式）<br>
+      · 左滑露出红色「删除」，点击弹系统确认对话框<br>
+      · 与备忘录/邮件完全一致，零学习成本
+    </div>
+    <div class="phone" id="phoneA">
+      <div class="sum"><div><div class="t">已记录次数</div><div class="v">2 次</div></div><div><div class="t">最近 eGFR</div><div class="v">86.2</div></div></div>
+      <div class="list-title">全部记录</div>
+      <div class="syslist">
+        <div class="swipe-wrap sys-row">
+          <div class="swipe-under"><button class="del-btn" onclick="confirmA(this)"><svg viewBox="0 0 16 16"><path d="M5.5 1v1H2v1.5h12V2h-3.5V1h-5zM3 5.5V14a1.5 1.5 0 001.5 1.5h7A1.5 1.5 0 0013 14V5.5H3zM5.8 7h1.1v6H5.8V7zm3.3 0h1.1v6H9.1V7z"/></svg>删除</button></div>
+          <div class="swipe-row" onpointerdown="dragStart(event,'A',this)">
+            <div><div class="rec-date">2026-09-26</div><div class="rec-cr">肌酐 75 μmol/L</div></div>
+            <div class="rec-egfr"><div class="n">86.2</div><div class="u">eGFR</div></div>
+          </div>
+        </div>
+        <div class="sys-row" style="padding:12px 14px; display:flex; align-items:center;">
+          <div><div class="rec-date">2026-09-19</div><div class="rec-cr">肌酐 68 μmol/L</div></div>
+          <div class="rec-egfr"><div class="n">92</div><div class="u">eGFR</div></div>
+        </div>
+      </div>
+      <div class="tip">← 左滑第一行，点删除看确认流程</div>
+      <div class="dialog-mask" id="maskA">
+        <div class="dialog">
+          <div class="dt">删除这条记录？</div>
+          <div class="dm">删除后本机记录不可恢复，且不影响其他设备数据。</div>
+          <div class="db">
+            <button class="danger" onclick="reallyDelete('A')">删除本机记录</button>
+            <button onclick="closeDialog('A')">取消</button>
+          </div>
+        </div>
+      </div>
+      <div class="undo" id="undoA"><span>已删除 1 条记录</span><button onclick="undoDelete('A')">撤销</button></div>
+    </div>
+  </div>
+
+  <!-- 方案 B -->
+  <div class="proposal">
+    <div class="proposal-title"><span class="tag">方案 B</span>保持白卡片 + 左滑按钮（视觉不变，推荐）</div>
+    <div class="proposal-points">
+      · 保持现有白色圆角卡片视觉，一点不变样<br>
+      · 左滑卡片露出红色删除按钮（带吸附回弹），点行外自动合拢<br>
+      · 点击删除仍弹确认对话框，与现有文案一致
+    </div>
+    <div class="phone" id="phoneB">
+      <div class="sum"><div><div class="t">已记录次数</div><div class="v">2 次</div></div><div><div class="t">最近 eGFR</div><div class="v">86.2</div></div></div>
+      <div class="list-title">全部记录</div>
+      <div class="swipe-wrap">
+        <div class="swipe-under"><button class="del-btn" onclick="confirmB(this)"><svg viewBox="0 0 16 16"><path d="M5.5 1v1H2v1.5h12V2h-3.5V1h-5zM3 5.5V14a1.5 1.5 0 001.5 1.5h7A1.5 1.5 0 0013 14V5.5H3zM5.8 7h1.1v6H5.8V7zm3.3 0h1.1v6H9.1V7z"/></svg>删除</button></div>
+        <div class="swipe-row" onpointerdown="dragStart(event,'B',this)">
+          <div><div class="rec-date">2026-09-26</div><div class="rec-cr">肌酐 75 μmol/L</div></div>
+          <div class="rec-egfr"><div class="n">86.2</div><div class="u">eGFR</div></div>
+        </div>
+      </div>
+      <div class="swipe-wrap">
+        <div class="swipe-row" style="pointer-events:none;">
+          <div><div class="rec-date">2026-09-19</div><div class="rec-cr">肌酐 68 μmol/L</div></div>
+          <div class="rec-egfr"><div class="n">92</div><div class="u">eGFR</div></div>
+        </div>
+      </div>
+      <div class="tip">← 左滑第一张卡片体验</div>
+      <div class="dialog-mask" id="maskB">
+        <div class="dialog">
+          <div class="dt">删除这条记录？</div>
+          <div class="dm">删除后本机记录不可恢复，且不影响其他设备数据。</div>
+          <div class="db">
+            <button class="danger" onclick="reallyDelete('B')">删除本机记录</button>
+            <button onclick="closeDialog('B')">取消</button>
+          </div>
+        </div>
+      </div>
+      <div class="undo" id="undoB"><span>已删除 1 条记录</span><button onclick="undoDelete('B')">撤销</button></div>
+    </div>
+  </div>
+
+  <!-- 方案 C -->
+  <div class="proposal">
+    <div class="proposal-title"><span class="tag">方案 C</span>滑到底直接删 + 撤销横幅（最快）</div>
+    <div class="proposal-points">
+      · 轻滑露出删除按钮；继续<b>滑到底</b>直接删除（无弹窗）<br>
+      · 底部出现「已删除 · 撤销」横幅，5 秒内可恢复<br>
+      · 操作最快；删除不再有确认弹窗打断
+    </div>
+    <div class="phone" id="phoneC">
+      <div class="sum"><div><div class="t">已记录次数</div><div class="v">2 次</div></div><div><div class="t">最近 eGFR</div><div class="v">86.2</div></div></div>
+      <div class="list-title">全部记录</div>
+      <div class="swipe-wrap" id="wrapC">
+        <div class="swipe-under" style="width:100%; justify-content:flex-end;"><div class="del-btn" style="width:100%; flex-direction:row; gap:6px; font-size:14px; font-weight:600;" onclick="snapDeleteC()"><svg viewBox="0 0 16 16" style="width:18px;height:18px;fill:#fff;"><path d="M5.5 1v1H2v1.5h12V2h-3.5V1h-5zM3 5.5V14a1.5 1.5 0 001.5 1.5h7A1.5 1.5 0 0013 14V5.5H3zM5.8 7h1.1v6H5.8V7zm3.3 0h1.1v6H9.1V7z"/></svg>滑到底删除</div></div>
+        <div class="swipe-row" id="rowC" onpointerdown="dragStart(event,'C',this)">
+          <div><div class="rec-date">2026-09-26</div><div class="rec-cr">肌酐 75 μmol/L</div></div>
+          <div class="rec-egfr"><div class="n">86.2</div><div class="u">eGFR</div></div>
+        </div>
+      </div>
+      <div class="swipe-wrap">
+        <div class="swipe-row" style="pointer-events:none;">
+          <div><div class="rec-date">2026-09-19</div><div class="rec-cr">肌酐 68 μmol/L</div></div>
+          <div class="rec-egfr"><div class="n">92</div><div class="u">eGFR</div></div>
+        </div>
+      </div>
+      <div class="tip">← 用力滑到底试试（也支持滑出按钮后点击）</div>
+      <div class="undo" id="undoC"><span>已删除 1 条记录 · <span id="cdC">5</span>s</span><button onclick="undoDelete('C')">撤销</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="compare">
+  <h3>三方案对比</h3>
+  <table>
+    <tr><th>维度</th><th>A 系统列表</th><th>B 白卡片左滑</th><th>C 滑到底+撤销</th></tr>
+    <tr><td>与现有视觉</td><td class="mid">列表样式略变（系统分组）</td><td class="good">完全不变</td><td class="good">完全不变</td></tr>
+    <tr><td>删除步骤</td><td>滑 → 点删除 → 确认</td><td>滑 → 点删除 → 确认</td><td class="good">滑到底即删（可撤销）</td></tr>
+    <tr><td>防误删</td><td class="good">确认弹窗</td><td class="good">确认弹窗</td><td class="mid">靠撤销横幅（5 秒）</td></tr>
+    <tr><td>实现方式</td><td>迁移为 SwiftUI List</td><td>自绘手势（保持 ScrollView 卡片）</td><td>自绘手势 + 撤销横幅</td></tr>
+    <tr><td>与需求文档</td><td class="good">保留确认对话框要求</td><td class="good">保留确认对话框要求</td><td class="mid">以撤销替代确认（需你认可）</td></tr>
+  </table>
+</div>
+
+<div class="hint">选定后回复“方案 A / B / C”。<b>个人推荐方案 B</b>——保留确认弹窗与现有卡片视觉，同时获得标准左滑手势。</div>
+
+<script>
+  // 通用拖拽滑动
+  let drag = null;
+  function dragStart(ev, plan, row) {
+    drag = { plan, row, x0: ev.clientX, base: parseFloat(row.dataset.dx || 0), moved: false };
+    row.setPointerCapture(ev.pointerId);
+    row.style.transition = 'none';
+    row.onpointermove = e => {
+      const dx = Math.min(0, Math.max(drag.base + e.clientX - drag.x0, plan === 'C' ? -row.parentElement.offsetWidth : -84));
+      if (Math.abs(dx) > 4) drag.moved = true;
+      row.style.transform = `translateX(${dx}px)`;
+      drag.dx = dx;
+    };
+    row.onpointerup = () => {
+      row.style.transition = '';
+      const dx = drag.dx || 0;
+      if (drag.plan === 'C' && dx < -(row.parentElement.offsetWidth * 0.82)) {
+        snapDeleteC();
+      } else if (dx < -30) {
+        row.style.transform = 'translateX(-80px)';
+        row.dataset.dx = -80;
+      } else {
+        row.style.transform = 'translateX(0)';
+        row.dataset.dx = 0;
+      }
+      drag = null;
+    };
+  }
+  function confirmA(btn) { document.getElementById('maskA').classList.add('show'); }
+  function confirmB(btn) { document.getElementById('maskB').classList.add('show'); }
+  function closeDialog(p) { document.getElementById('mask' + p).classList.remove('show'); }
+  function reallyDelete(p) {
+    closeDialog(p);
+    const mask = document.getElementById('phone' + p);
+    const wrap = mask.querySelector('.swipe-wrap');
+    wrap.style.transition = 'opacity .25s, transform .25s';
+    wrap.style.opacity = '0'; wrap.style.transform = 'translateX(-24px)';
+    setTimeout(() => { wrap.style.display = 'none'; showUndo(p); }, 250);
+  }
+  let timers = {};
+  function showUndo(p) {
+    const u = document.getElementById('undo' + p);
+    u.classList.add('show');
+    let sec = 5;
+    const cd = u.querySelector('[id^="cd"]');
+    if (cd) cd.textContent = sec;
+    clearInterval(timers[p]);
+    timers[p] = setInterval(() => {
+      sec--; if (cd) cd.textContent = Math.max(0, sec);
+      if (sec <= 0) { u.classList.remove('show'); clearInterval(timers[p]); }
+    }, 1000);
+  }
+  function undoDelete(p) {
+    clearInterval(timers[p]);
+    document.getElementById('undo' + p).classList.remove('show');
+    location.reload();
+  }
+  function snapDeleteC() {
+    const row = document.getElementById('rowC');
+    row.style.transition = ''; row.style.transform = 'translateX(0)'; row.dataset.dx = 0;
+    reallyDelete('C');
+  }
+</script>
+</body>
+</html>

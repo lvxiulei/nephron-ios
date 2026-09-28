@@ -24,7 +24,7 @@ struct KnowledgeView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
                 header
                 estimateCard
                 tipsCard

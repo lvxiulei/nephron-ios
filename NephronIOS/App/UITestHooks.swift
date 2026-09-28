@@ -25,7 +25,12 @@ enum UITestHooks {
         arguments.contains("-uitest-trigger-comparison")
     }
 
-    /// 启动后滚动到页面底部（配合可选指标展开截图）
+    /// 趋势图默认选中最新点（配合选中态截图）
+    static var trendSelectLast: Bool {
+        arguments.contains("-uitest-trend-select-last")
+    }
+
+    /// 启后滚动到页面底部（配合可选指标展开截图）
     static var scrollToBottom: Bool {
         arguments.contains("-uitest-scroll-bottom")
     }

@@ -22,22 +22,19 @@ struct HistoryView: View {
         }
         // 删除记录等数量变化时的轻微触感
         .sensoryFeedback(.impact(weight: .light), trigger: store.recordCount)
-        .confirmationDialog(
+        .alert(
             "删除这条记录？",
             isPresented: Binding(
                 get: { recordPendingDelete != nil },
                 set: { if !$0 { recordPendingDelete = nil } }
-            ),
-            titleVisibility: .visible
+            )
         ) {
-            Button("删除本机记录", role: .destructive) {
+            Button("删除", role: .destructive) {
                 deletePending()
             }
             Button("取消", role: .cancel) {
                 recordPendingDelete = nil
             }
-        } message: {
-            Text("删除后本机记录不可恢复，且不影响其他设备数据。")
         }
         .alert("删除失败", isPresented: $showsDeleteError) {
             Button("我知道了", role: .cancel) {}
@@ -58,18 +55,48 @@ struct HistoryView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    /// 方案 A：摘要与趋势保持卡片视觉，记录区为系统分组列表（标准左滑删除）。
     private var content: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                summaryRow
-                trendCard
-                recordListCard
+        List {
+            Section {
+                cardListRow(summaryRow)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .listSectionSpacing(20)
+
+            Section {
+                cardListRow(trendCard)
+            }
+            .listSectionSpacing(20)
+
+            Section {
+                // 存储层按日期正序（供趋势图从左到右递增）；列表展示反转：最新在前，
+                // 同日多条时创建最晚的在前
+                ForEach(store.records.reversed(), id: \.persistentModelID) { record in
+                    recordRow(record)
+                        .listRowBackground(Palette.card)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                recordPendingDelete = record
+                            } label: {
+                                Image(systemName: "trash")
+                            }
+                            .accessibilityLabel("删除")
+                        }
+                }
+            }
         }
-        .contentMargins(.bottom, 96, for: .scrollContent)
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
         .background(Palette.background)
+        .contentMargins(.bottom, 96, for: .scrollContent)
+    }
+
+    /// 卡片式行保持原卡片视觉：透明行背景、零内边距、无分隔线。
+    private func cardListRow(_ row: some View) -> some View {
+        row
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
+            .listRowSeparator(.hidden)
     }
 
     // MARK: 双摘要
@@ -115,9 +142,6 @@ struct HistoryView: View {
                     .foregroundStyle(Palette.secondaryText)
             }
             TrendChartView(points: store.records.map(TrendDataPoint.init(record:)))
-            Text("只用于看变化，不替代医生判断")
-                .font(.caption)
-                .foregroundStyle(Palette.secondaryText)
         }
         .cardStyle()
         .accessibilityElement(children: .contain)
@@ -125,21 +149,7 @@ struct HistoryView: View {
 
     // MARK: 记录列表
 
-    private var recordListCard: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(store.records.enumerated()), id: \.element.persistentModelID) { index, record in
-                if index > 0 {
-                    Divider()
-                        .overlay(Palette.hairline)
-                        .padding(.leading, 0)
-                }
-                recordRow(record)
-            }
-        }
-        .cardStyle()
-    }
-
-    /// 固定三列：检验信息 / eGFR / 操作。
+    /// 行内容：检验信息 / eGFR（删除通过左滑操作）。
     private func recordRow(_ record: RecordModel) -> some View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
@@ -154,32 +164,16 @@ struct HistoryView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
 
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(EGFRCalculator.formattedNumber(record.egfr))
-                    .font(.headline)
-                    .foregroundStyle(Palette.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                Text("eGFR")
-                    .font(.caption2)
-                    .foregroundStyle(Palette.secondaryText)
-            }
-            .frame(width: 68, alignment: .trailing)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("eGFR \(EGFRCalculator.formattedNumber(record.egfr))")
-
-            Button {
-                recordPendingDelete = record
-            } label: {
-                Image(systemName: "trash")
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.danger)
-                    .frame(width: 40, height: 36)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("删除 \(DayDate.displayFormatter.string(from: record.measuredOn)) 的记录")
+            Text(EGFRCalculator.formattedNumber(record.egfr))
+                .font(.headline)
+                .foregroundStyle(Palette.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(width: 68, alignment: .trailing)
+                .accessibilityLabel("eGFR \(EGFRCalculator.formattedNumber(record.egfr))")
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 4)
+        .accessibilityHint("左滑可删除")
     }
 
     private func deletePending() {

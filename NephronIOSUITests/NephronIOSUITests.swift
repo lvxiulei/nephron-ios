@@ -34,11 +34,10 @@ final class NephronIOSUITests: XCTestCase {
         }
     }
 
-    /// 点键盘工具栏“完成”收起键盘（悬浮 Tab 栏会被键盘遮挡，切 Tab 前必须收起）。
+    /// 滚动收起键盘（scrollDismissesKeyboard(.immediately)；悬浮 Tab 栏会被键盘遮挡，切 Tab 前必须收起）。
     @MainActor private func dismissKeyboard(_ app: XCUIApplication) {
-        let done = app.buttons["calculator.keyboard.done"]
-        if done.waitForExistence(timeout: 2) {
-            done.tap()
+        if app.keyboards.firstMatch.exists {
+            app.swipeUp()
             usleep(500_000)
         }
     }
@@ -223,6 +222,20 @@ final class NephronIOSUITests: XCTestCase {
         done.tap()
 
         XCTAssertTrue(dateField.waitForExistence(timeout: 5), "关闭后日期块未恢复")
+    }
+
+    /// 长按趋势图：出现选中提示卡（日期 + eGFR）。
+    @MainActor func testTrendLongPressShowsTooltip() throws {
+        let app = launchClean(["-uitest-seed-demo", "-uitest-seed-same-date", "-uitest-tab=1"])
+        let chart = app.otherElements.matching(
+            NSPredicate(format: "label CONTAINS %@", "eGFR 趋势图")
+        ).firstMatch
+        XCTAssertTrue(chart.waitForExistence(timeout: 8))
+
+        chart.press(forDuration: 0.8)
+
+        let anyTooltip = app.descendants(matching: .any)["trend.tooltip"]
+        XCTAssertTrue(anyTooltip.waitForExistence(timeout: 5), "长按后未出现选中提示卡")
     }
 
     @MainActor private func changeCreatinine(_ app: XCUIApplication, to newValue: String) {

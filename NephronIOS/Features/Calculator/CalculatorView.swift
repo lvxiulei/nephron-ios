@@ -52,12 +52,24 @@ private struct CalculatorContent: View {
     /// 方案 C：标签列定宽（两行同宽 → 输入框天然等宽）。
     @ScaledMetric(relativeTo: .subheadline) private var unitLabelWidth: CGFloat = 60
 
+    /// 可选指标面板共享布局常量：钾/磷格内输入框宽与尿蛋白输入框目标宽
+    /// 都由这三个值派生（见 syncUrineInputWidth），调整布局时需保持公式同步。
+    private let tilePadding: CGFloat = 10
+    private let tileSpacing: CGFloat = 8
+    private let bandPadding: CGFloat = 10
+
+    /// 尿蛋白两行输入框统一宽度：与钾/磷格内输入框严格同宽。
+    /// 格内输入框宽 = 面板内宽/2 − tilePadding×2 − tileSpacing/2；带内可用宽 = 面板内宽 − bandPadding×2，
+    /// 故目标宽 = 带内宽/2 + bandPadding − tilePadding×2 − tileSpacing/2（运行时测得，随屏幕宽度自适应、不随字号缩放）。
+    /// 测量完成前为 nil，输入框退回内容自适应宽度（仅展开动画第一帧，不可见）。
+    @State private var urineInputWidth: CGFloat?
+
     @State private var showsDatePicker = false
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 20) {
                     header
                     inputCard
                     if let result = viewModel.displayResult {
@@ -76,35 +88,36 @@ private struct CalculatorContent: View {
             .background(Palette.background)
             .onAppear {
                 if UITestHooks.scrollToBottom {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                        withAnimation {
-                            proxy.scrollTo("calculator-bottom", anchor: .bottom)
+                    // 大字体下首次滚动会被面板展开动画打断，补一次确保到底
+                    for delay in [0.6, 1.6] {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                            withAnimation {
+                                proxy.scrollTo("calculator-bottom", anchor: .bottom)
+                            }
                         }
                     }
                 }
             }
         }
-        // 对照弹层用 fullScreenCover 呈现：键盘收起后系统可能残留透明层吞掉
-        // 普通-overlay 上的点击；真实呈现层不受影响
-        .fullScreenCover(
-            isPresented: Binding(
-                get: { viewModel.comparisonTarget != nil },
-                set: { if !$0 { viewModel.comparisonDismissed() } }
-            )
-        ) {
-            if let existing = viewModel.comparisonTarget {
-                ComparisonOverlay(
-                    existing: existing,
-                    dateText: viewModel.comparisonDateText,
-                    onUpdate: { viewModel.comparisonUpdateTapped() },
-                    onKeepNew: { viewModel.comparisonKeepNewTapped() },
-                    onDismiss: { viewModel.comparisonDismissed() }
-                )
-                .transaction { $0.disablesAnimations = true }
-            } else {
-                Color.clear
+        // 对照确认卡：真实呈现层居中展示（浅遮罩、无底部滑入、不受键盘残留层影响）
+        .background(
+            CenterCardPresenter(
+                isPresented: Binding(
+                    get: { viewModel.comparisonTarget != nil },
+                    set: { if !$0 { viewModel.comparisonDismissed() } }
+                ),
+                onTapOutside: { viewModel.comparisonDismissed() }
+            ) {
+                if let existing = viewModel.comparisonTarget {
+                    ComparisonOverlay(
+                        existing: existing,
+                        dateText: viewModel.comparisonDateText,
+                        onUpdate: { viewModel.comparisonUpdateTapped() },
+                        onKeepNew: { viewModel.comparisonKeepNewTapped() }
+                    )
+                }
             }
-        }
+        )
         .onChange(of: focusedField) { old, new in
             if old == .age, new != .age {
                 viewModel.ageDidEndEditing()
@@ -130,16 +143,6 @@ private struct CalculatorContent: View {
             Button("我知道了", role: .cancel) {}
         } message: {
             Text(viewModel.storageErrorText ?? "")
-        }
-        .toolbar {
-            // 数字键盘没有回车键，提供显式的“完成”收起键盘
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("完成") {
-                    focusedField = nil
-                }
-                .accessibilityIdentifier("calculator.keyboard.done")
-            }
         }
     }
 
@@ -471,8 +474,7 @@ private struct CalculatorContent: View {
                         .frame(width: 20, height: 20)
                         .overlay(Circle().strokeBorder(Palette.optCircle, lineWidth: 1))
                 }
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 48)
+                .frame(maxWidth: .infinity, minHeight: 48, alignment: .center)
             }
             .buttonStyle(.plain)
             .accessibilityHint(viewModel.isOptionalExpanded ? "收起可选指标" : "展开可选指标")
@@ -528,7 +530,7 @@ private struct CalculatorContent: View {
                 text: $viewModel.systolicText,
                 placeholder: "高压",
                 a11yLabel: "血压·高压输入框",
-                width: 73,
+                maxWidth: 73,
                 keyboard: .numberPad
             )
             Text("/")
@@ -538,23 +540,23 @@ private struct CalculatorContent: View {
                 text: $viewModel.diastolicText,
                 placeholder: "低压",
                 a11yLabel: "血压·低压输入框",
-                width: 73,
+                maxWidth: 73,
                 keyboard: .numberPad
             )
         }
-        .padding(10)
+        .padding(tilePadding)
         .background(Palette.optTile, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(Palette.optTileBorder, lineWidth: 1))
     }
 
     /// 尿酸 / 红细胞 / 钾 / 磷 的 2×2 指标格。
     private var fourTileGrid: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 8) {
+        VStack(spacing: tileSpacing) {
+            HStack(spacing: tileSpacing) {
                 metricTile("尿酸", "μmol/L", $viewModel.uricAcidText)
                 metricTile("红细胞", "/ul", $viewModel.redBloodCellText)
             }
-            HStack(spacing: 8) {
+            HStack(spacing: tileSpacing) {
                 metricTile("钾", "mmol/L", $viewModel.potassiumText)
                 metricTile("磷", "mmol/L", $viewModel.phosphorusText)
             }
@@ -594,26 +596,46 @@ private struct CalculatorContent: View {
             urineRow("尿蛋白肌酐比值", "g/g.Cr", $viewModel.upcrText, showsDivider: false)
             urineRow("尿蛋白定量", "g/L", $viewModel.urineProteinText, showsDivider: true)
         }
-        .padding(.horizontal, 10)
+        // 测带内可用宽（padding 之前），派生出与钾/磷格内输入框同宽的值
+        .background(
+            GeometryReader { proxy in
+                Color.clear
+                    .onChange(of: proxy.size.width, initial: true) { _, width in
+                        syncUrineInputWidth(width)
+                    }
+            }
+        )
+        .padding(.horizontal, bandPadding)
         .padding(.top, 9)
         .background(Palette.optUrineBand, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
         .padding(.top, 9)
     }
 
+    private func syncUrineInputWidth(_ bandInnerWidth: CGFloat) {
+        let inputMinWidth: CGFloat = 44
+        // 带宽不足以容纳最小输入框时不派生（保持 nil，退回内容自适应宽）
+        guard bandInnerWidth > 2 * (inputMinWidth - bandPadding + tilePadding * 2 + tileSpacing / 2) else { return }
+        urineInputWidth = max(inputMinWidth, bandInnerWidth / 2 + bandPadding - tilePadding * 2 - tileSpacing / 2)
+    }
+
     private func urineRow(_ label: String, _ unit: String, _ text: Binding<String>, showsDivider: Bool) -> some View {
         HStack(alignment: .center, spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .center, spacing: 5) {
                 Text(label)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Palette.optLabel)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                 Text(unit)
                     .font(.caption2)
                     .foregroundStyle(Palette.optUnit)
+                    .fixedSize()
+                    .lineLimit(1)
             }
             Spacer(minLength: 10)
-            replicaInput(text: text, placeholder: "选填", a11yLabel: "\(label)输入框", width: 90)
+            replicaInput(text: text, placeholder: "选填", a11yLabel: "\(label)输入框", fixedWidth: urineInputWidth, maxWidth: 150)
         }
-        .frame(minHeight: 54)
+        .frame(minHeight: 54, alignment: .center)
         .overlay(alignment: .top) {
             if showsDivider {
                 Rectangle()
@@ -681,11 +703,13 @@ private struct CalculatorContent: View {
     }
 
     /// 复刻版输入框：居中文本、浅底、细描边、圆角 7。
+    /// fixedWidth 非空时宽度恒定（min=max），不随输入内容伸缩。
     private func replicaInput(
         text: Binding<String>,
         placeholder: String,
         a11yLabel: String,
-        width: CGFloat? = nil,
+        fixedWidth: CGFloat? = nil,
+        maxWidth: CGFloat? = nil,
         keyboard: UIKeyboardType = .decimalPad
     ) -> some View {
         TextField(
@@ -701,7 +725,7 @@ private struct CalculatorContent: View {
         .multilineTextAlignment(.center)
         .padding(.horizontal, 8)
         .frame(minHeight: 34)
-        .frame(width: width)
+        .frame(minWidth: fixedWidth ?? 44, maxWidth: fixedWidth ?? maxWidth)
         .background(Palette.optTile, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(Palette.optInputBorder, lineWidth: 1))
         .accessibilityLabel(a11yLabel)

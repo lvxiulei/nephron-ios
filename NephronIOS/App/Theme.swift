@@ -78,4 +78,18 @@ enum Palette {
     static let optButtonDoneText = dynamic(light: 0x176A59, dark: 0x7BD0B5)
     static let optButtonDisabledBg = dynamic(light: 0xDFE8E4, dark: 0x2A3835)
     static let optButtonDisabledText = dynamic(light: 0x94A29D, dark: 0x84928D)
+
+    // MARK: 趋势图选中提示（复刻小程序 trend-tooltip / trend-detail）
+    /// 提示卡背景（#FCFDFF9 97% 不透明）
+    static let tipBg = dynamic(light: 0xFCFDF9, dark: 0x1F2B27)
+    /// 提示卡描边（rgba(37,151,126,0.18)）
+    static let tipBorder = dynamic(light: 0xBFE0D4, dark: 0x2C4A40)
+    /// 提示卡日期 / 详情面板日期
+    static let tipDate = dynamic(light: 0x54766A, dark: 0x9DB3AB)
+    /// 提示卡大数值
+    static let tipValue = dynamic(light: 0x176E5C, dark: 0x6FBFA8)
+    /// 提示卡单位
+    static let tipUnit = dynamic(light: 0x32675A, dark: 0x8FA69D)
+    /// 提示占位文案 / 指标卡名称小字
+    static let tipCaption = dynamic(light: 0x8A9993, dark: 0x8FA099)
 }

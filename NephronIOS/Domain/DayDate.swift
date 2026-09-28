@@ -57,26 +57,28 @@ nonisolated enum DayDate {
     static let displayLocale = Locale(identifier: "zh_CN")
 
     /// 展示用完整日期：yyyy-MM-dd。
-    static var displayFormatter: DateFormatter {
+    /// static let 缓存单例（惰性初始化线程安全）；string(from:) 自 iOS 7 起线程安全，
+    /// 避免趋势图拖动等热路径每次访问都重建 formatter。
+    static let displayFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = displayLocale
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
-    }
+    }()
 
     /// 趋势图 X 轴短日期：MM/dd。
-    static var shortDisplayFormatter: DateFormatter {
+    static let shortDisplayFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = displayLocale
         formatter.dateFormat = "MM/dd"
         return formatter
-    }
+    }()
 
     /// “保存于”时间：HH:mm，24 小时制。
-    static var timeFormatter: DateFormatter {
+    static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = displayLocale
         formatter.dateFormat = "HH:mm"
         return formatter
-    }
+    }()
 }
