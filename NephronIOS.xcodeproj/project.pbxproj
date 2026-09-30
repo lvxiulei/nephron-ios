@@ -23,53 +23,27 @@
 		};
 /* End PBXContainerItemProxy section */
 
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		AB12CD34EF56000000000030 /* NephronIOS */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
-			path = NephronIOS;
-			sourceTree = "<group>";
-		};
-		AB12CD34EF56000000000031 /* NephronIOSTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
-			path = NephronIOSTests;
-			sourceTree = "<group>";
-		};
-		AB12CD34EF56000000000032 /* NephronIOSUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
-			path = NephronIOSUITests;
-			sourceTree = "<group>";
-		};
-/* End PBXFileSystemSynchronizedRootGroup section */
-
 /* Begin PBXFileReference section */
-		AB12CD34EF56000000000010 /* NephronIOS.app */ = {
-			isa = PBXFileReference;
-			explicitFileType = wrapper.application;
-			includeInIndex = 0;
-			path = NephronIOS.app;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		AB12CD34EF56000000000011 /* NephronIOSTests.xctest */ = {
-			isa = PBXFileReference;
-			explicitFileType = wrapper.cfbundle;
-			includeInIndex = 0;
-			path = NephronIOSTests.xctest;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		AB12CD34EF56000000000012 /* NephronIOSUITests.xctest */ = {
-			isa = PBXFileReference;
-			explicitFileType = wrapper.cfbundle;
-			includeInIndex = 0;
-			path = NephronIOSUITests.xctest;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
+		AB12CD34EF56000000000010 /* NephronIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NephronIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB12CD34EF56000000000011 /* NephronIOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NephronIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB12CD34EF56000000000012 /* NephronIOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NephronIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		AB12CD34EF560000000000A0 /* Exceptions for "NephronIOS" from "NephronIOS" */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = AB12CD34EF56000000000020 /* NephronIOS */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		AB12CD34EF56000000000030 /* NephronIOS */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (AB12CD34EF560000000000A0 /* Exceptions for "NephronIOS" from "NephronIOS" */); explicitFileTypes = {}; explicitFolders = (); path = NephronIOS; sourceTree = "<group>"; };
+		AB12CD34EF56000000000031 /* NephronIOSTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = NephronIOSTests; sourceTree = "<group>"; };
+		AB12CD34EF56000000000032 /* NephronIOSUITests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = NephronIOSUITests; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		AB12CD34EF56000000000041 /* Frameworks */ = {
@@ -218,7 +192,6 @@
 			);
 			mainGroup = AB12CD34EF56000000000002;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 70;
 			productRefGroup = AB12CD34EF56000000000003 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -411,8 +384,8 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
-				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
@@ -423,12 +396,15 @@
 		AB12CD34EF56000000000061 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = S5S65YA53Z;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "eGFR 肾康随记";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.medical";
+				INFOPLIST_FILE = NephronIOS/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "eGFR计算随记";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -447,12 +423,15 @@
 		AB12CD34EF56000000000062 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = S5S65YA53Z;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "eGFR 肾康随记";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.medical";
+				INFOPLIST_FILE = NephronIOS/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "eGFR计算随记";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -475,12 +454,12 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEFAULT_ACTOR_ISOLATION = nonisolated;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.lvxiulei.nephronios.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NephronIOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/NephronIOS";
@@ -494,12 +473,12 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEFAULT_ACTOR_ISOLATION = nonisolated;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.lvxiulei.nephronios.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NephronIOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/NephronIOS";
@@ -512,12 +491,12 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEFAULT_ACTOR_ISOLATION = nonisolated;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.lvxiulei.nephronios.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = NephronIOS;
@@ -530,12 +509,12 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEFAULT_ACTOR_ISOLATION = nonisolated;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.lvxiulei.nephronios.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = NephronIOS;

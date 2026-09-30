@@ -1,5 +1,39 @@
 # PROGRESS.md
 
+## 更新记录：表头圆角缺口回归修复（2026-09-30）
+
+- 表头自绘圆角调整为 26pt，使描边位于 insetGrouped 的外层裁剪范围内；背景绘制前设置最小高度 44pt，同时保留零行间距，兼顾圆角连续和表头底部无空隙。
+- 模拟器构建通过，浅色、深色、XXXL 截图检查两侧圆弧完整且与首条记录无缝连接，截图 `/private/tmp/history-corner-{light,dark,xxxl}.png`。
+
+## 更新记录：记录表头与首条记录去除空隙（2026-09-30）
+
+- 显式设置列表行间距为 0，并在 List 层取消默认最小行高，消除透明表头行多出的底部留白；保留浅绿色背景、圆角边框及底部分隔线。
+- 模拟器构建通过；浅色、深色、XXXL 列表截图确认表头与首条记录连续相接，文字完整。截图：`/private/tmp/history-gap-{light,dark,xxxl}.png`。
+
+## 更新记录：记录页补页头与列表表头（含 XXXL 修复、测试基建加固）（2026-09-29·二）
+
+- 记录页此前无页头：新增「变化要连起来看。/ 每一次检验都会留在这里，串成你的 eGFR 趋势。」（title2+subheadline，与计算/了解两页同款样式）。
+- 记录列表新增表头行「检验信息 | eGFR」：右列与记录行数值列（宽 68、尾对齐）同列。XXXL 下「eGFR」超 68pt 被硬折行——补 `lineLimit(1)+minimumScaleFactor(0.6)`（与数值同款处理）后单行完整。
+- 新增截图钩子 `-uitest-history-scroll-records`（ScrollViewReader 滚到表头）：页头新增后，外部滚动（整屏 swipeUp/坐标拖拽/行元素快滑）的起笔分别落入趋势图、行滑动手势、悬浮 Tab 栏，全部失效——XXXL 列表区截图改为程序化滚动驱动。
+- 测试修复链（页头使整体下移 ~70pt 的连带）：①截图驱动测试改「静止位先判定」（bottomLimit 统一 726，拖拽仅兜底）；②两探针的第二参照行 30 天前→1 天前（第 5 行落出 List 虚拟化缓冲）；③探针滚动深度改由钩子完成、就绪断言改等「检验信息」表头（摘要卡被钩子滚出屏后虚拟化移出可达性树）。
+- 实测：`TEST_RUNNER_` 前缀环境变量经命令前缀传递未到测试进程（mode 恒为默认 light），驱动测试的模式分支暂不可用，勿依赖。
+- pbxproj 曾被 Xcode 重写丢失 `DEVELOPMENT_TEAM`（S5S65YA53Z 已补回）；同步文件夹场景 Info.plist 需以 `PBXFileSystemSynchronizedBuildFileExceptionSet` 排除出资源。
+- 验证：三模式截图（浅/深/XXXL 顶部 + XXXL 列表区）入库 `screenshots/history-pageheader-*.png`、`history-listheader-xxxl.png`；全量 40 单测 + 12 UI 通过；已装用户 iPhone。
+
+## 更新记录：上架收尾——App 图标接入、更名「eGFR计算随记」、出口合规声明（2026-09-29·一）
+
+- 工程此前无 Assets.xcassets（桌面为白板图标）：新建 `NephronIOS/Assets.xcassets`（AppIcon 单尺寸 1024，源自 `~/Pictures/eGFR-logo.png` 缩放，无透明通道），pbxproj 补 `ASSETCATALOG_COMPILER_APPICON_NAME`。
+- `CFBundleDisplayName` 「eGFR 肾康随记」→「eGFR计算随记」（商店名/备案名/桌面名三处一致；弃「肾康」因其为成药高频注册商标）。
+- `LSApplicationCategoryType` medical → healthcare-fitness，对齐商店主分类「健康健美」。
+- 新建 `NephronIOS/Info.plist`（`ITSAppUsesNonExemptEncryption=NO` 出口加密豁免）；同步文件夹会把 plist 当资源重复拷贝导致构建失败——以 `PBXFileSystemSynchronizedBuildFileExceptionSet`（membershipExceptions 排除 Info.plist）修复。
+- 验证：模拟器构建通过；装进 iPhone 17 模拟器截主屏——图标（肾脏+趋势折线 Logo）渲染完整，名称「eGFR计算随记」单行无截断。文案全套与进度同步至 APPSTORE.md。
+
+## 更新记录：修复 XXXL 大字体下「最近 eGFR」摘要卡单位折行（2026-09-28·五）
+
+- 问题：超大字体（辅助功能字号）下，「最近 eGFR」摘要卡内数值 92.1（title2、可 0.6 缩放）把行宽占满，单位「eGFR」（caption、无约束）宽度不足被按字符折行为「eG/FR」。
+- 修复：单位 `Text` 加 `.lineLimit(1)` + `.layoutPriority(1)`——单位锁定单行并优先取足理想宽度，剩余宽度不足时由左侧数值（已有 `minimumScaleFactor(0.6)`）缩让；常规字号布局不变。
+- 验证：常规浅色 / XXXL 浅色 / XXXL 深色截图（数值与单位同行、单位单行完整无折行无截断、两卡等宽无溢出、数值清晰），截图存 `screenshots/summary-unit-*.png`；全量 40 单测 + 12 UI 通过；已装用户 iPhone（安装成功，锁屏致启动指令被拒，解锁后点图标）。
+
 ## 更新记录：修复左滑删除弹框出现时记录列表整体跳动（2026-09-28·四）
 
 - 问题：记录页左滑点删除、确认弹框出现的一瞬间，整个列表内容向下跳变（约 74pt，滚动位置被重置回顶部），点"取消"后也不回弹——用户观感即"列表重新排序动了一下"。

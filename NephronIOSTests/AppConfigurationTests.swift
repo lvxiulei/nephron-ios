@@ -5,7 +5,7 @@ import Foundation
 struct AppConfigurationTests {
     @Test func bundleDisplayNameIsProductName() {
         let displayName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
-        #expect(displayName == "eGFR 肾康随记")
+        #expect(displayName == "eGFR计算随记")
     }
 
     @Test func bundleIdentifierMatchesPlan() {

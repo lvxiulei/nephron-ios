@@ -105,38 +105,69 @@ struct HistoryView: View {
 
     /// 方案 A：摘要与趋势保持卡片视觉，记录区为系统分组列表（标准左滑删除）。
     private var content: some View {
-        List {
-            Section {
-                cardListRow(summaryRow)
-            }
-            .listSectionSpacing(20)
+        ScrollViewReader { proxy in
+            List {
+                Section {
+                    cardListRow(summaryRow)
+                } header: {
+                    pageHeader
+                        .textCase(nil)
+                        // insetGrouped 的 Section 标题自带额外缩进和顶部留白；
+                        // 对齐其他 Tab 的页头，且避开普通行的圆角裁剪。
+                        .padding(.leading, -16)
+                        .padding(.top, -12)
+                        .padding(.bottom, 6)
+                }
+                .listSectionSpacing(20)
 
-            Section {
-                cardListRow(trendCard)
-            }
-            .listSectionSpacing(20)
+                Section {
+                    cardListRow(trendCard)
+                }
+                .listSectionSpacing(20)
 
-            Section {
-                // 存储层按日期正序（供趋势图从左到右递增）；列表展示反转：最新在前，
-                // 同日多条时创建最晚的在前
+                Section {
+                    // 表头：左「检验信息」右「eGFR」，与记录行数值列（宽 68、尾对齐）同列
+                    listHeaderRow
+                        .id("history-list-header")
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    // 存储层按日期正序（供趋势图从左到右递增）；列表展示反转：最新在前，
+                    // 同日多条时创建最晚的在前
                     ForEach(store.records.reversed(), id: \.persistentModelID) { record in
-                    RecordSwipeRow(
-                        record: record,
-                        openRecordID: $openRecordID,
-                        onDeleteRequest: { deleteFlow.request(record) }
-                    )
-                    .listRowBackground(Palette.card)
-                    .accessibilityHint("左滑可删除")
-                    .accessibilityAction(named: "删除") {
-                        deleteFlow.request(record)
+                        RecordSwipeRow(
+                            record: record,
+                            openRecordID: $openRecordID,
+                            onDeleteRequest: { deleteFlow.request(record) }
+                        )
+                        .id(record.persistentModelID)
+                        .listRowBackground(Palette.card)
+                        .accessibilityHint("左滑可删除")
+                        .accessibilityAction(named: "删除") {
+                            deleteFlow.request(record)
+                        }
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
+            .listRowSpacing(0)
+            .environment(\.defaultMinListRowHeight, 0)
+            .scrollContentBackground(.hidden)
+            .background(Palette.background)
+            .contentMargins(.top, 12, for: .scrollContent)
+            .contentMargins(.bottom, 96, for: .scrollContent)
+            .onAppear {
+                // 截图钩子：滚动到表头（表头顶部对齐可视区顶部），供大字体截图用。
+                // 大字体下外部坐标拖拽会落在趋势图或行滑动手势上，无法可靠滚动
+                if UITestHooks.historyScrollToRecords {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        withAnimation(.smooth(duration: 0.3)) {
+                            proxy.scrollTo("history-list-header", anchor: .top)
+                        }
                     }
                 }
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .background(Palette.background)
-        .contentMargins(.bottom, 96, for: .scrollContent)
     }
 
     /// 卡片式行保持原卡片视觉：透明行背景、零内边距、无分隔线。
@@ -145,6 +176,50 @@ struct HistoryView: View {
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets())
             .listRowSeparator(.hidden)
+    }
+
+    // MARK: 页头
+
+    /// 页头：与「计算」「了解」两页同款的大标题 + 一句说明。
+    private var pageHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("变化要连起来看。")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(Palette.primaryText)
+            Text("每一次检验都会留在这里，组成你的 eGFR 趋势。")
+                .font(.subheadline)
+                .foregroundStyle(Palette.secondaryText)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// 记录列表表头：右列与记录行 eGFR 数值（宽 68、尾对齐）同列对齐。
+    /// XXXL 下「eGFR」文字宽超 68pt，锁定单行并允许缩放（与记录行数值同款处理），否则被硬折行
+    private var listHeaderRow: some View {
+        HStack {
+            Text("检验信息")
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            Text("eGFR")
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .frame(width: 68, alignment: .trailing)
+        }
+        .font(.footnote)
+        .foregroundStyle(Palette.secondaryText)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity, minHeight: 44)
+        .background {
+            UnevenRoundedRectangle(cornerRadii: .init(topLeading: 26, topTrailing: 26))
+                .fill(Palette.optPanel)
+        }
+        .overlay {
+            UnevenRoundedRectangle(cornerRadii: .init(topLeading: 26, topTrailing: 26))
+                .strokeBorder(Palette.hairline, lineWidth: 1)
+        }
+        .padding(.top, 1)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: 双摘要
@@ -171,6 +246,10 @@ struct HistoryView: View {
                 Text(unit)
                     .font(.caption)
                     .foregroundStyle(Palette.secondaryText)
+                    // 单位锁定单行并优先取足宽度：XXXL 下宽度不足时由左侧
+                    // 数值（已有 minimumScaleFactor）缩让，而不是单位折行
+                    .lineLimit(1)
+                    .layoutPriority(1)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -292,11 +371,17 @@ private struct RecordSwipeRow: View {
     private var revealGesture: some Gesture {
         DragGesture(minimumDistance: 12)
             .onChanged { value in
-                guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                guard abs(value.translation.width) > max(12, abs(value.translation.height) * 1.5) else { return }
                 let base: CGFloat = isOpen ? -revealWidth : 0
                 offsetX = min(0, max(-revealWidth, base + value.translation.width))
             }
             .onEnded { value in
+                guard abs(value.translation.width) > max(24, abs(value.translation.height) * 1.5) else {
+                    withAnimation(.smooth(duration: 0.22)) {
+                        offsetX = isOpen ? -revealWidth : 0
+                    }
+                    return
+                }
                 let shouldOpen = value.predictedEndTranslation.width < -revealWidth * 0.6
                     || value.translation.width < -24
                 withAnimation(.smooth(duration: 0.22)) {

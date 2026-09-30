@@ -34,4 +34,10 @@ enum UITestHooks {
     static var scrollToBottom: Bool {
         arguments.contains("-uitest-scroll-bottom")
     }
+
+    /// 记录页启动后自动滚动到记录列表区（配合大字体下表头/记录行截图；
+    /// 大字体下坐标拖拽会落在趋势图或行手势上，无法可靠滚动）
+    static var historyScrollToRecords: Bool {
+        arguments.contains("-uitest-history-scroll-records")
+    }
 }

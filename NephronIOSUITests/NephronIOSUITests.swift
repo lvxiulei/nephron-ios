@@ -240,8 +240,9 @@ final class NephronIOSUITests: XCTestCase {
 
     /// 左滑删除：弹框出现期间记录行不得发生滚动跳变或顺序互换（紧凑采样 + 滚动深度场景）。
     @MainActor func testSwipeDeleteDialogKeepsRowsStable() throws {
-        let app = launchClean(["-uitest-seed-demo", "-uitest-tab=1"])
-        XCTAssertTrue(app.staticTexts["已记录次数"].waitForExistence(timeout: 8))
+        let app = launchClean(["-uitest-seed-demo", "-uitest-tab=1", "-uitest-history-scroll-records"])
+        // 钩子会把摘要卡滚出屏（虚拟化移出可达性树），就绪标志改用滚动后仍在屏的列表表头
+        XCTAssertTrue(app.staticTexts["检验信息"].waitForExistence(timeout: 8))
 
         let dayFormatter = DateFormatter()
         dayFormatter.locale = Locale(identifier: "en_US_POSIX")
@@ -256,16 +257,11 @@ final class NephronIOSUITests: XCTestCase {
             print("===DUMP-BEGIN===\n\(app.debugDescription)\n===DUMP-END===")
             XCTFail("目标记录行未出现：\(dateText(7))")
         }
-        let oldest = app.staticTexts[dateText(30)]
-        XCTAssertTrue(oldest.exists, "最旧记录行未出现：\(dateText(30))")
+        // 页头（2026-09-29 新增）使整体下移后，第 5 行（30 天前）落出 List 虚拟化缓冲、
+        // 启动时不在可达性树；第二采样参照改用常驻可见的最新行（1 天前）
+        let oldest = app.staticTexts[dateText(1)]
+        XCTAssertTrue(oldest.waitForExistence(timeout: 3), "第二参照行未出现")
         let summary = app.staticTexts["已记录次数"]
-
-        // 制造滚动深度：先滚到目标行，再整屏上滑一次，然后修正回目标行可见
-        scrollToVisible(target, in: app)
-        app.swipeUp()
-        usleep(300_000)
-        scrollToVisible(target, in: app)
-        usleep(400_000)
 
         // 摘要卡滚出屏外后 List 会将其移出可达性树。判定列表是否“跳回顶部”要看
         // 摘要卡是否真正进入可视区：弹框呈现时系统可能实例化屏幕外的单元格
@@ -275,6 +271,16 @@ final class NephronIOSUITests: XCTestCase {
             let frame = summary.frame
             return frame.maxY > 0 && frame.minY < 780
         }
+
+        // 滚动深度由启动钩子 -uitest-history-scroll-records 完成（ScrollViewReader 滚到表头）：
+        // 页头（2026-09-29 新增）后，整屏 swipeUp / 坐标拖拽 / 行元素快滑的起笔会落入
+        // 趋势图、行滑动手势或悬浮 Tab 栏，均无法可靠滚动。钩子在 0.8s 后触发，这里等它完成
+        var scrolled = false
+        for _ in 0..<20 {
+            if !summaryVisible() { scrolled = true; break }
+            usleep(200_000)
+        }
+        XCTAssertTrue(scrolled, "钩子滚动未生效：摘要卡始终可见")
 
         let baseTargetY = target.frame.minY
         let baseOldestY = oldest.frame.minY
@@ -326,6 +332,25 @@ final class NephronIOSUITests: XCTestCase {
         XCTAssertEqual(oldest.frame.minY, baseOldestY, accuracy: 3, "取消弹框后最旧行未回到原位")
     }
 
+    /// 在记录行上斜向上滚动时，横向位移不能误触发删除按钮。
+    @MainActor func testDiagonalUpwardScrollDoesNotRevealDelete() throws {
+        let app = launchClean(["-uitest-seed-demo", "-uitest-tab=1", "-uitest-history-scroll-records"])
+        XCTAssertTrue(app.staticTexts["检验信息"].waitForExistence(timeout: 8))
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        let date = Calendar.current.date(byAdding: .day, value: -7, to: Date())!
+        let row = app.staticTexts[formatter.string(from: date)]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+
+        let start = row.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let end = start.withOffset(CGVector(dx: -30, dy: -160))
+        start.press(forDuration: 0.05, thenDragTo: end)
+
+        XCTAssertFalse(app.buttons["删除"].firstMatch.exists, "斜向上滚动误展开删除按钮")
+    }
+
     /// 截图驱动：按环境变量 SCREENSHOT_MODE（light / dark / large）附加启动参数，
     /// 停留在“删除按钮展开”“确认弹框弹出”两种状态，供并行 simctl 截屏抓取。
     @MainActor func testScreenshotDriverDeleteStates() throws {
@@ -346,23 +371,25 @@ final class NephronIOSUITests: XCTestCase {
         }
         XCTAssertTrue(app.staticTexts["已记录次数"].waitForExistence(timeout: 8), "截图驱动：记录页未出现")
 
-        // 滚动后选一条基本可见的记录行：不压顶、不进悬浮 Tab 栏区。
-        // 用坐标拖拽而非 app.swipeUp()：大字体下趋势图占据屏幕中部，
-        // swipeUp 起笔落在图表的拖拽手势上，列表不会滚动。
-        let bottomLimit: CGFloat = mode == "large" ? 726 : 700
+        // 滚动后选一条基本可见的记录行：不压顶、不进悬浮 Tab 栏区（栏顶约 778）。
+        // 先在静止位判定——页头（2026-09-29 新增）使静止位首行落在 y≈696；
+        // 拖拽起笔 (0.5, 0.80)≈y699 恰落在该行文字上会被自绘滑动手势吃掉，列表不滚
+        let bottomLimit: CGFloat = 726
         let window = app.windows.firstMatch
         var swipeTarget: XCUIElement?
-        for _ in 0..<8 where swipeTarget == nil {
-            let start = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.80))
-            let end = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25))
-            start.press(forDuration: 0.1, thenDragTo: end)
-            usleep(400_000)
+        for _ in 0..<12 where swipeTarget == nil {
             for days in [1, 7, 14, 21, 30] {
                 let row = app.staticTexts[dateText(days)]
                 if row.exists && row.frame.height > 0 && row.frame.minY > 90 && row.frame.maxY < bottomLimit {
                     swipeTarget = row
                     break
                 }
+            }
+            if swipeTarget == nil {
+                let start = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.80))
+                let end = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25))
+                start.press(forDuration: 0.1, thenDragTo: end, withVelocity: 250, thenHoldForDuration: 0.2)
+                usleep(1_000_000)
             }
         }
         guard let target = swipeTarget else {
@@ -394,8 +421,9 @@ final class NephronIOSUITests: XCTestCase {
 
     /// 对照诊断：左滑后不点删除、点别处收起滑动（无弹框无状态变化），列表是否仍跳动。
     @MainActor func testSwipeCloseWithoutAlertKeepsRowsStable() throws {
-        let app = launchClean(["-uitest-seed-demo", "-uitest-tab=1"])
-        XCTAssertTrue(app.staticTexts["已记录次数"].waitForExistence(timeout: 8))
+        let app = launchClean(["-uitest-seed-demo", "-uitest-tab=1", "-uitest-history-scroll-records"])
+        // 钩子会把摘要卡滚出屏（虚拟化移出可达性树），就绪标志改用滚动后仍在屏的列表表头
+        XCTAssertTrue(app.staticTexts["检验信息"].waitForExistence(timeout: 8))
 
         let dayFormatter = DateFormatter()
         dayFormatter.locale = Locale(identifier: "en_US_POSIX")
@@ -407,8 +435,9 @@ final class NephronIOSUITests: XCTestCase {
 
         let target = app.staticTexts[dateText(7)]
         XCTAssertTrue(target.waitForExistence(timeout: 5), "目标记录行未出现")
-        let oldest = app.staticTexts[dateText(30)]
-        XCTAssertTrue(oldest.exists, "最旧记录行未出现")
+        // 同上：30 天前行落出虚拟化缓冲，第二参照改用常驻可见的最新行
+        let oldest = app.staticTexts[dateText(1)]
+        XCTAssertTrue(oldest.waitForExistence(timeout: 3), "第二参照行未出现")
         let summary = app.staticTexts["已记录次数"]
         func summaryVisible() -> Bool {
             guard summary.exists else { return false }
@@ -416,11 +445,13 @@ final class NephronIOSUITests: XCTestCase {
             return frame.maxY > 0 && frame.minY < 780
         }
 
-        scrollToVisible(target, in: app)
-        app.swipeUp()
-        usleep(300_000)
-        scrollToVisible(target, in: app)
-        usleep(400_000)
+        // 同弹框探针：滚动深度由启动钩子完成，这里等它生效（详见弹框探针处注释）
+        var scrolled = false
+        for _ in 0..<20 {
+            if !summaryVisible() { scrolled = true; break }
+            usleep(200_000)
+        }
+        XCTAssertTrue(scrolled, "钩子滚动未生效：摘要卡始终可见")
 
         let baseTargetY = target.frame.minY
         let baseOldestY = oldest.frame.minY
