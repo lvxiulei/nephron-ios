@@ -89,12 +89,12 @@ struct KnowledgeView: View {
     }
 
     private var formulaCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Button {
-                withAnimation(.smooth(duration: 0.22)) {
-                    isFormulaExpanded.toggle()
-                }
-            } label: {
+        Button {
+            withAnimation(.smooth(duration: 0.22)) {
+                isFormulaExpanded.toggle()
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("使用的计算公式")
@@ -118,40 +118,41 @@ struct KnowledgeView: View {
                         .foregroundStyle(Palette.secondaryText)
                         .rotationEffect(.degrees(isFormulaExpanded ? 0 : 180))
                 }
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint(isFormulaExpanded ? "收起公式详情" : "展开公式详情")
-            .accessibilityIdentifier("knowledge.formula.toggle")
 
-            if isFormulaExpanded {
-                VStack(alignment: .leading, spacing: 12) {
-                    formulaRow(title: "适用范围", body: "18 岁及以上成人的稳定状态估算；不适用于急性肾损伤、孕妇、截肢或极端肌肉量人群。")
-                    formulaRow(title: "单位换算", body: "若检验单使用 μmol/L，计算前会除以 88.4 换算为 mg/dL；血肌酐合理范围为换算后 10–2000 μmol/L。")
-                    formulaRow(title: "结果可能不同", body: "不同医院可能使用 2009 版 CKD-EPI、MDRD 或包含胱抑素 C 的公式，数值存在差异属于正常现象。")
+                if isFormulaExpanded {
+                    VStack(alignment: .leading, spacing: 12) {
+                        formulaRow(title: "适用范围", body: "18 岁及以上成人的稳定状态估算；不适用于急性肾损伤、孕妇、截肢或极端肌肉量人群。")
+                        formulaRow(title: "单位换算", body: "若检验单使用 μmol/L，计算前会除以 88.4 换算为 mg/dL；血肌酐合理范围为换算后 10–2000 μmol/L。")
+                        formulaRow(title: "结果可能不同", body: "不同医院可能使用 2009 版 CKD-EPI、MDRD 或包含胱抑素 C 的公式，数值存在差异属于正常现象。")
 
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("公式表达式")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Palette.primaryText)
-                        Text("eGFR = 142 × min(Scr/κ, 1)^α × max(Scr/κ, 1)^-1.200 × 0.9938^年龄 × 性别系数")
-                            .font(.footnote.monospaced())
-                            .foregroundStyle(Palette.primaryText)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(10)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Palette.fieldBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        Text("女性：κ = 0.7，α = -0.241，性别系数 = 1.012\n男性：κ = 0.9，α = -0.302，性别系数 = 1")
-                            .font(.caption)
-                            .foregroundStyle(Palette.secondaryText)
-                            .fixedSize(horizontal: false, vertical: true)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("公式表达式")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(Palette.primaryText)
+                            Text("eGFR = 142 × min(Scr/κ, 1)^α × max(Scr/κ, 1)^-1.200 × 0.9938^年龄 × 性别系数")
+                                .font(.footnote.monospaced())
+                                .foregroundStyle(Palette.primaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(10)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Palette.fieldBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            Text("女性：κ = 0.7，α = -0.241，性别系数 = 1.012\n男性：κ = 0.9，α = -0.302，性别系数 = 1")
+                                .font(.caption)
+                                .foregroundStyle(Palette.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
+                    .padding(.top, 2)
+                    .transition(.opacity)
                 }
-                .padding(.top, 2)
-                .transition(.opacity)
             }
+            .clipped()
+            .cardStyle()
+            .contentShape(Rectangle())
         }
-        .clipped()
-        .cardStyle()
+        .buttonStyle(.plain)
+        .accessibilityHint(isFormulaExpanded ? "收起公式详情" : "展开公式详情")
+        .accessibilityIdentifier("knowledge.formula.toggle")
     }
 
     private func formulaRow(title: String, body text: String) -> some View {

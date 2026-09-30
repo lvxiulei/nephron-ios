@@ -198,15 +198,22 @@ final class NephronIOSUITests: XCTestCase {
 
     /// 了解页公式折叠区展开 / 收起基本路径。
     @MainActor func testKnowledgeFormulaToggle() throws {
-        let app = launchClean(["-uitest-tab=2"])
-        let toggle = app.buttons["knowledge.formula.toggle"]
-        XCTAssertTrue(toggle.waitForExistence(timeout: 8))
-        scrollToVisible(toggle, in: app)
-        toggle.tap()
-        XCTAssertTrue(app.staticTexts["公式表达式"].waitForExistence(timeout: 3))
-        scrollToVisible(toggle, in: app)
-        toggle.tap()
-        XCTAssertFalse(app.staticTexts["公式表达式"].waitForExistence(timeout: 3))
+        for (mode, arguments) in [("light", [String]()), ("dark", ["-uitest-force-dark"]), ("xxxl", ["-uitest-force-large-text"])] {
+            let app = launchClean(["-uitest-tab=2"] + arguments)
+            let toggle = app.buttons["knowledge.formula.toggle"]
+            XCTAssertTrue(toggle.waitForExistence(timeout: 8))
+            scrollToVisible(toggle, in: app)
+            // 点击卡片左侧内边距，验证文字和箭头之外的区域也能展开。
+            toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: 0.5)).tap()
+            XCTAssertTrue(app.staticTexts["公式表达式"].waitForExistence(timeout: 3))
+            let screenshot = XCTAttachment(screenshot: app.screenshot())
+            screenshot.name = "formula-expanded-\(mode)"
+            screenshot.lifetime = .keepAlways
+            add(screenshot)
+            toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: 0.05)).tap()
+            XCTAssertFalse(app.staticTexts["公式表达式"].waitForExistence(timeout: 3))
+            app.terminate()
+        }
     }
 
     /// 检验日期：点击日期块弹出日历面板，选择后可完成关闭。
