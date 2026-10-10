@@ -4,13 +4,15 @@ import UIKit
 /// 全局配色：浅色以 #F7F8F4 为底、#0F5B50 为主绿、#17312C 为正文色；
 /// 深色模式提供同色相暗色变体，保持克制、安静的医疗工具感。
 enum Palette {
-    private static func dynamic(light: UInt32, dark: UInt32) -> Color {
+    // nonisolated：UIColor 的 dynamicProvider 会被 UIKit/SwiftUI 在后台渲染线程调用
+    //（如 AsyncRenderer 解析颜色），带 MainActor 隔离会触发 Swift 6 运行时隔离检查闪退
+    private nonisolated static func dynamic(light: UInt32, dark: UInt32) -> Color {
         Color(uiColor: UIColor { traits in
             traits.userInterfaceStyle == .dark ? uiColor(dark) : uiColor(light)
         })
     }
 
-    private static func uiColor(_ hex: UInt32) -> UIColor {
+    private nonisolated static func uiColor(_ hex: UInt32) -> UIColor {
         UIColor(
             red: CGFloat((hex >> 16) & 0xFF) / 255,
             green: CGFloat((hex >> 8) & 0xFF) / 255,

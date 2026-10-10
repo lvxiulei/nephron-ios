@@ -492,6 +492,36 @@ final class NephronIOSUITests: XCTestCase {
         XCTAssertLessThanOrEqual(maxOldestDelta, 3, "仅收起滑动最旧行也跳动：\(samples)")
     }
 
+    /// 探针：保存 eGFR 后展开可选指标、填写并点「保存补充信息」。
+    /// 真机反馈此步闪退；此前该路径无 UI 覆盖。红=点按钮后界面消失（崩溃），绿=补充保存完成。
+    @MainActor func testSupplementSaveFlow() throws {
+        let app = launchClean(["-uitest-prefill", "-uitest-autocalculate"])
+
+        let saveButton = app.buttons["保存这次记录"].firstMatch
+        XCTAssertTrue(saveButton.waitForExistence(timeout: 8), "结果卡未出现")
+        saveButton.tap()
+        XCTAssertTrue(app.buttons["✓ 已保存"].firstMatch.waitForExistence(timeout: 3), "记录未保存成功")
+
+        let expandHeader = app.staticTexts["添加其他检验指标（可选）"].firstMatch
+        scrollToVisible(expandHeader, in: app)
+        expandHeader.tap()
+        let uricField = app.textFields["尿酸输入框"]
+        XCTAssertTrue(uricField.waitForExistence(timeout: 3), "可选指标区未展开")
+        scrollToVisible(uricField, in: app)
+        uricField.tap()
+        uricField.typeText("300")
+        dismissKeyboard(app)
+
+        XCTAssertTrue(app.staticTexts["已填写 1 项"].waitForExistence(timeout: 3), "填写未被计入")
+        let supplement = app.buttons["保存补充信息"].firstMatch
+        scrollToVisible(supplement, in: app)
+        XCTAssertTrue(supplement.waitForExistence(timeout: 3), "保存补充信息按钮未出现")
+        supplement.tap()
+
+        // 存活断言：补充行仍在（App 崩溃时可达性树清空，此断言超时变红）
+        XCTAssertTrue(app.staticTexts["已填写 1 项"].waitForExistence(timeout: 3), "点「保存补充信息」后界面消失——疑似闪退")
+    }
+
     @MainActor private func changeCreatinine(_ app: XCUIApplication, to newValue: String) {
         let creatinineField = app.textFields["calculator.creatinine.field"]
         XCTAssertTrue(creatinineField.waitForExistence(timeout: 5))
