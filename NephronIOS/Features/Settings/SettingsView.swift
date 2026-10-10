@@ -126,13 +126,19 @@ struct SettingsView: View {
     }
 
 
-    // MARK: 版本
+    // MARK: 版本与备案
 
     private var versionFooter: some View {
-        Text(AppInfo.versionText)
-            .font(.footnote)
-            .foregroundStyle(Palette.secondaryText)
-            .frame(maxWidth: .infinity)
-            .accessibilityIdentifier("settings.version")
+        VStack(spacing: 4) {
+            Text(AppInfo.versionText)
+                .font(.footnote)
+                .foregroundStyle(Palette.secondaryText)
+                .accessibilityIdentifier("settings.version")
+            // 备案监管要求：App 内显著位置标注备案编号
+            Text("苏ICP备2026069169号-4A")
+                .font(.caption2)
+                .foregroundStyle(Palette.secondaryText)
+        }
+        .frame(maxWidth: .infinity)
     }
 }

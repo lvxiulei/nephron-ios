@@ -1,5 +1,14 @@
 # PROGRESS.md
 
+## 更新记录：ICP 备案通过 + 网页三件套 + App 内备案号（2026-10-10）
+
+- ICP 备案（App 备案，个人主体，江苏管局，订单 2031850680766）**管局审核通过**，备案号「苏ICP备2026069169号-4A」。iOS 特征信息走 2024 新流程：Bundle ID + Apple Distribution 证书公钥/SHA-1（无需数字 Apple ID）；发布证书经 Xcode 创建（SHA-1 `5A:23:B2:C3:7B:07:C6:13:5B:21:7F:B7:05:AA:1B:A6:C6:8D:E0:BE`）。
+- ASC 建档完成（Apple ID 那步已被新流程取代）；1.0 版本页文案四件套（推广文本/描述/关键词/审核备注）已交用户回填。
+- 域名解析验证：ygysdev.cn 与 www 均 → 47.116.203.151（阿里公共 DNS 223.5.5.5 验证；本机直查返回 198.0.x.x 属本地网络 DNS 污染，勿信）。
+- 新建 `web/`：index.html（官网首页）、nephron/privacy.html、nephron/support.html（三页均带备案号页脚+工信部链接、深色适配）；一键部署脚本 `web/deploy.sh`（scp + nginx + certbot HTTPS + 验证），待用户在 ECS 执行。
+- 「我的」页版本号下方新增备案号行（监管要求 App 内显著位置标注）：三模式截图验收（settings-icp-light/dark/xxxl.png），像素验证两行页脚均居中（中心 x=603px）；全量 40 单测 + 12 UI 通过。
+- APPSTORE.md 进度快照/主流程已更新至本日。
+
 ## 更新记录：公式卡片整块点击（2026-09-30）
 
 - 了解页「使用的计算公式」由整张卡片承接按钮交互，文字、留白和箭头均可展开/收起，保留原布局和动画。

@@ -1,19 +1,21 @@
 # APPSTORE.md — 上架计划与待办清单
 
-> 本文件记录「eGFR 肾康随记」上架 App Store 的全部决策、进度与待办。
+> 本文件记录「eGFR计算随记」上架 App Store 的全部决策、进度与待办。
 > 到达各节点时由 AI 助手主动提醒（见文末「提醒点」）。
-> 最近更新：2026-09-29
+> 最近更新：2026-10-10
 
-## 一、当前进度快照（2026-09-29）
+## 一、当前进度快照（2026-10-10）
 
 | 事项 | 状态 |
 |---|---|
-| 域名 ygysdev.cn（3 年 ¥120） | ✅ 已购，实名认证已通过 |
+| 域名 ygysdev.cn（3 年 ¥120） | ✅ 已购，实名认证已通过；**已解析**：@/www → 47.116.203.151（阿里公共DNS验证） |
 | 服务器 ECS（华东2上海，2核2G/3M/40G ESSD Entry，Ubuntu 24.04，¥99/年续费同价） | ✅ 已购 |
 | 备案服务码 | ➖ 不需要（域名/服务器/备案同账号，流程内直接选实例） |
-| Apple 开发者账号（个人，¥688/年，支付宝已付，扣费确认邮件已到） | ⏳ 等会员资格激活（「membership active」邮件） |
-| App 图标 / 显示名「eGFR计算随记」/ 出口合规声明 | ✅ 已接入工程并构建验证（2026-09-29） |
-| ICP 备案（App 备案，个人主体） | ⏸ 等 Apple 账号激活 → ASC 建档拿数字 Apple ID 后提交 |
+| Apple 开发者账号（个人，¥688/年） | ✅ 已激活（2026-10-10 前）；Apple Distribution 发布证书已创建（SHA-1 `5A:23:B2:C3:7B:07:C6:13:5B:21:7F:B7:05:AA:1B:A6:C6:8D:E0:BE`） |
+| ASC 建档 | ✅ App 已创建，1.0 版本页字段已可填（文案四件套已交用户回填） |
+| ICP 备案（App 备案，个人主体，江苏管局） | ✅ **2026-10-10 管局审核通过，备案号「苏ICP备2026069169号-4A」**（订单号 2031850680766；2024 新流程用 Bundle ID+公钥+SHA-1，无需数字 Apple ID） |
+| App 内备案号标注（监管要求） | ✅ 「我的」页版本号下方（2026-10-10，截图 settings-icp-*.png 验收） |
+| 隐私政策页 / 支持页 / 官网首页 | 🔄 已写好入仓 `web/`（含备案号页脚+工信部链接）；一键部署脚本 `web/deploy.sh`（nginx+HTTPS），待用户在 ECS 执行 |
 
 ## 二、已定决策（勿反复）
 
@@ -35,7 +37,7 @@
 
 | # | 事项 | 说明 | 状态 |
 |---|---|---|---|
-| 1 | 隐私政策页 + 支持页 | 部署到自己服务器（nginx + 静态 HTML），路径 `/nephron/privacy.html`、`/nephron/support.html`；备案通过后域名解析、免费 DV 证书 | ⬜ |
+| 1 | 隐私政策页 + 支持页 | 部署到自己服务器（nginx + 静态 HTML），路径 `/nephron/privacy.html`、`/nephron/support.html` | 🔄 页面+部署脚本已就绪（`web/deploy.sh`），待执行 |
 | 2 | 隐私标签（营养标签） | 申报「不收集任何数据」（本架构全场最简） | ⬜ |
 | 3 | 出口加密合规 | Info.plist 设 `ITSAppUsesNonExemptEncryption = NO`（仅系统加密，豁免） | ✅ 2026-09-29 |
 | 4 | App 图标 | 1024×1024，无透明无圆角，单尺寸 | ✅ 已从 ~/Pictures/eGFR-logo.png 接入 Assets.xcassets，模拟器主屏验证 |
@@ -46,14 +48,15 @@
 | 9 | 评分引导 | `requestReview` 系统弹窗（苹果一方 API，零网络，一行调用） | ⬜ 可随 v1.1 |
 | 10 | TestFlight 自测 | 首次上传后内部测试，真机跑正式签名包 1~2 天再提审 | ⬜ |
 
-## 五、剩余主流程（按序）
+## 五、剩余主流程（2026-10-10 起，按序）
 
-1. Apple 激活邮件到达 → ASC 登录、同意协议
-2. ASC 建档（名称/语言/Bundle ID/SKU）→ 记下**数字 Apple ID**
-3. [beian.aliyun.com](https://beian.aliyun.com) 提交 App 备案（域名 + 直接选 ECS 实例 + App Apple ID；需阿里云 App 刷脸核验）→ 管局约一周
-4. 备案期间：完成第四节 1/2/4/5/6（服务器页面、图标、截图、文案）
-5. 备案通过 → 域名解析到服务器公网 IP → 部署页面 + HTTPS
-6. ASC 填备案号 → Xcode Archive 上传 → TestFlight 真机自测 → 提审（首审 24~48h）
+1. ✅ ~~ASC 登录、建档~~ / ✅ ~~ICP 备案~~（苏ICP备2026069169号-4A）
+2. **用户执行**：ECS 安全组放行 80/443 → Mac 上跑 `bash web/deploy.sh root@47.116.203.151`（nginx+HTTPS+三个页面，含验证）
+3. ASC「App 信息」页回填备案号「苏ICP备2026069169号-4A」+ Support URL `https://ygysdev.cn/nephron/support.html` + 隐私政策 URL `https://ygysdev.cn/nephron/privacy.html`
+4. 商店截图 6.9"（AI 出图）→ 填入 ASC；隐私标签/年龄分级/审核备注照第四节
+5. Xcode Archive（Release）→ 上传 ASC → TestFlight 真机自测
+6. 提审（首审 24~48h）→ 过审后手动发布
+7. 页面开通 30 日内：beian.mps.gov.cn 公安备案（到时提醒）
 
 ## 六、提醒点（AI 助手在各节点主动提醒）
 

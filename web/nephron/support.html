@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>支持与反馈 - eGFR计算随记</title>
+<style>
+  :root { --green: #0F5B50; --bg: #F7F8F4; --ink: #17312C; --sub: #5B6B66; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #10201C; --ink: #E8EEEC; --sub: #9AAEA8; }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--ink);
+    min-height: 100vh; display: flex; flex-direction: column;
+  }
+  main { flex: 1; max-width: 640px; margin: 0 auto; padding: 40px 24px; }
+  h1 { font-size: 24px; margin-bottom: 24px; }
+  h2 { font-size: 17px; margin: 24px 0 10px; }
+  p, li { font-size: 15px; line-height: 1.9; }
+  ul { padding-left: 20px; }
+  a { color: var(--green); }
+  footer { text-align: center; padding: 20px; font-size: 13px; color: var(--sub); }
+  footer a { color: var(--sub); }
+</style>
+</head>
+<body>
+<main>
+  <h1>支持与反馈</h1>
+
+  <h2>常见问题</h2>
+
+  <h3 style="font-size:15px;margin:18px 0 6px;">eGFR 是什么？</h2>
+  <p>eGFR（估算肾小球滤过率）是基于血肌酐等指标估算的肾功能参考值。本应用采用国际通用 CKD-EPI 2021 公式，适用于 18 岁及以上成人。估算结果仅为参考，不构成医疗建议；如有健康问题请咨询专业医生。</p>
+
+  <h3 style="font-size:15px;margin:18px 0 6px;">我的数据存在哪里？</h3>
+  <p>全部数据仅保存在你的设备本地，本应用不联网、不上传、无法找回你主动删除或卸载后丢失的数据——请自行留意保留。</p>
+
+  <h3 style="font-size:15px;margin:18px 0 6px;">支持哪些检验指标？</h3>
+  <p>血肌酐（μmol/L 或 mg/dL）为基础必填；可选记录血压（高压/低压）、尿酸、红细胞、血钾、血磷、尿蛋白肌酐比值、尿蛋白定量。</p>
+
+  <h3 style="font-size:15px;margin:18px 0 6px;">计算结果和医生说法不一致？</h3>
+  <p>不同医院可能使用不同公式（如 CKD-EPI 2009、MDRD）与标准化校正，结果存在差异属正常现象。请以医生诊断为准。</p>
+
+  <h2>联系我们</h2>
+  <p>问题反馈与建议请邮件至：<a href="mailto:lvxiulei.cloud@outlook.com">lvxiulei.cloud@outlook.com</a>，我们会尽快回复。</p>
+</main>
+<footer>
+  <div>苏ICP备2026069169号-4A</div>
+  <div><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">beian.miit.gov.cn</a></div>
+</footer>
+</body>
+</html>
