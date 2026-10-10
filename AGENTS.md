@@ -27,7 +27,7 @@
 
 ### 既定交互/设计决策（勿回退）
 
-- 备份/导出导入已整体移除；计算为手动触发；检验日期=显式按钮+日历 sheet（勿再用透明 DatePicker 叠加）。
+- 备份/导出导入的**界面与流程已整体移除**（2026-09-25 用户决定）；但存储层原语**刻意保留供未来导入功能复用，勿当死代码清除**：`RecordStore.replaceAll` + `StorageError.replaceFailed`、`DayDate.isoDayString`/`date(fromISODay:)`（2026-10-10 用户拍板）。计算为手动触发；检验日期=显式按钮+日历 sheet（勿再用透明 DatePicker 叠加）。
 - 记录左滑删除=自绘滑动（DragGesture 露出删除按钮）——iOS 26/27 点系统 `swipeActions` 按钮会让 List 滚动归零，勿改回；配套：仅展开时渲染删除按钮、弹框状态用独立 `@Observable` + 独立子层呈现、弹框关闭后再收起行、容器 `.clipped()`。
 - 输入框一律弹性宽度（min 44/max 上限），勿固定宽；多输入框勿共享同一 `@FocusState` 枚举值（真机闪退）；校验时机=失焦后提示。
 - 固定列文字用单行+缩放（`lineLimit(1)`+`minimumScaleFactor`，单位等小字加 `layoutPriority`）保证等高不折行。

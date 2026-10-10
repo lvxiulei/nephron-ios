@@ -46,6 +46,18 @@ final class RecordStore {
         }
     }
 
+    /// 写库收尾样板：失败回滚并抛存储错误，成功后重载列表。
+    private func performSave(onFailure error: StorageError, logKey: String) throws {
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            RecordStore.logger.error("\(logKey, privacy: .public)失败：\(error, privacy: .public)")
+            throw error
+        }
+        reload()
+    }
+
     var recordCount: Int { records.count }
 
     var latestRecord: RecordModel? { records.last }
@@ -85,14 +97,7 @@ final class RecordStore {
         )
         record.mergeOptionalMetrics(optionals)
         modelContext.insert(record)
-        do {
-            try modelContext.save()
-        } catch {
-            modelContext.rollback()
-            RecordStore.logger.error("保存记录失败：\(error, privacy: .public)")
-            throw StorageError.saveFailed
-        }
-        reload()
+        try performSave(onFailure: .saveFailed, logKey: "保存记录")
         return record
     }
 
@@ -106,42 +111,22 @@ final class RecordStore {
     ) throws {
         record.applyBaseFields(input: input, result: result, measuredOn: measuredOn)
         record.mergeOptionalMetrics(optionals)
-        do {
-            try modelContext.save()
-        } catch {
-            modelContext.rollback()
-            RecordStore.logger.error("更新记录失败：\(error, privacy: .public)")
-            throw StorageError.saveFailed
-        }
-        reload()
+        try performSave(onFailure: .saveFailed, logKey: "更新记录")
     }
 
     /// “保存补充信息”：只合并可选指标，不新建记录。
     func supplementOptionals(of record: RecordModel, with metrics: OptionalMetricsInput) throws {
         record.mergeOptionalMetrics(metrics)
-        do {
-            try modelContext.save()
-        } catch {
-            modelContext.rollback()
-            RecordStore.logger.error("保存补充信息失败：\(error, privacy: .public)")
-            throw StorageError.saveFailed
-        }
-        reload()
+        try performSave(onFailure: .saveFailed, logKey: "保存补充信息")
     }
 
     func deleteRecord(_ record: RecordModel) throws {
         modelContext.delete(record)
-        do {
-            try modelContext.save()
-        } catch {
-            modelContext.rollback()
-            RecordStore.logger.error("删除记录失败：\(error, privacy: .public)")
-            throw StorageError.deleteFailed
-        }
-        reload()
+        try performSave(onFailure: .deleteFailed, logKey: "删除记录")
     }
 
-    /// 恢复备份：整体替换当前本机记录。任何失败都回滚，原数据不变。
+    /// 整体替换当前本机记录。任何失败都回滚，原数据不变。
+    /// 当前 App 内无调用，刻意保留供未来导入功能复用，勿删（2026-10-10 用户决策）。
     func replaceAll(with newRecords: [RecordModel]) throws {
         do {
             try modelContext.delete(model: RecordModel.self)
@@ -153,13 +138,6 @@ final class RecordStore {
         for record in newRecords {
             modelContext.insert(record)
         }
-        do {
-            try modelContext.save()
-        } catch {
-            modelContext.rollback()
-            RecordStore.logger.error("写入恢复数据失败：\(error, privacy: .public)")
-            throw StorageError.replaceFailed
-        }
-        reload()
+        try performSave(onFailure: .replaceFailed, logKey: "写入恢复数据")
     }
 }

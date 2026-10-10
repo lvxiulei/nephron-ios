@@ -1,6 +1,6 @@
 import Foundation
 
-/// 生物学性别，原始值用于备份协议，展示值使用简体中文。
+/// 生物学性别，原始值用于本机 SwiftData 存储，展示值使用简体中文。
 nonisolated enum BiologicalSex: String, Codable, CaseIterable, Sendable {
     case female
     case male
@@ -13,7 +13,7 @@ nonisolated enum BiologicalSex: String, Codable, CaseIterable, Sendable {
     }
 }
 
-/// 血肌酐单位，原始值用于备份协议。
+/// 血肌酐单位，原始值用于本机 SwiftData 存储。
 nonisolated enum CreatinineUnit: String, Codable, CaseIterable, Sendable {
     case micromolPerL = "umol/L"
     case mgPerDL = "mg/dL"

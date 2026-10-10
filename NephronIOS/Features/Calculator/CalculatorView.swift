@@ -291,7 +291,6 @@ private struct CalculatorContent: View {
         .accessibilityElement(children: .contain)
     }
 
-    /// 透明的系统 DatePicker 承担交互，外观用自定义的 yyyy-MM-dd 文本。
     /// 内嵌在血肌酐输入框右侧的单位切换（iOS 分段样式小胶囊）。
     private var unitChips: some View {
         HStack(spacing: 2) {

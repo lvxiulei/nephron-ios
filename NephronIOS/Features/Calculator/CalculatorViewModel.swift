@@ -4,6 +4,19 @@ import OSLog
 
 private let logger = Logger(subsystem: "com.lvxiulei.nephronios", category: "calculator")
 
+/// 输入框文本统一解析：去首尾空白；空文本返回 nil（视为未填）；逗号按小数点。
+private func parseInteger(_ text: String) -> Int? {
+    let trimmed = text.trimmingCharacters(in: .whitespaces)
+    guard !trimmed.isEmpty else { return nil }
+    return Int(trimmed)
+}
+
+private func parseNumber(_ text: String) -> Double? {
+    let trimmed = text.trimmingCharacters(in: .whitespaces)
+    guard !trimmed.isEmpty else { return nil }
+    return Double(trimmed.replacingOccurrences(of: ",", with: "."))
+}
+
 /// 计算 Tab 的状态与操作：输入解析、结果计算、保存、同日期对照、补充可选指标。
 /// 模块默认 MainActor 隔离。
 @Observable
@@ -58,15 +71,9 @@ final class CalculatorViewModel {
     private var trimmedAgeText: String { ageText.trimmingCharacters(in: .whitespaces) }
     private var trimmedCreatinineText: String { creatinineText.trimmingCharacters(in: .whitespaces) }
 
-    var parsedAge: Int? {
-        guard !trimmedAgeText.isEmpty else { return nil }
-        return Int(trimmedAgeText)
-    }
+    var parsedAge: Int? { parseInteger(ageText) }
 
-    var parsedCreatinine: Double? {
-        guard !trimmedCreatinineText.isEmpty else { return nil }
-        return Double(trimmedCreatinineText.replacingOccurrences(of: ",", with: "."))
-    }
+    var parsedCreatinine: Double? { parseNumber(creatinineText) }
 
     /// 年龄字段错误文案；空值不提示，非法值给明确中文文案。
     // MARK: 校验时机（方案 A：输入中不打扰，失焦后再校验，再编辑即清除）
@@ -161,25 +168,15 @@ final class CalculatorViewModel {
     // MARK: 可选指标
 
     private var parsedOptionals: (systolic: Int?, diastolic: Int?, uricAcid: Double?, rbc: Double?, potassium: Double?, phosphorus: Double?, upcr: Double?, urineProtein: Double?) {
-        func number(_ text: String) -> Double? {
-            let trimmed = text.trimmingCharacters(in: .whitespaces)
-            guard !trimmed.isEmpty else { return nil }
-            return Double(trimmed.replacingOccurrences(of: ",", with: "."))
-        }
-        func integer(_ text: String) -> Int? {
-            let trimmed = text.trimmingCharacters(in: .whitespaces)
-            guard !trimmed.isEmpty else { return nil }
-            return Int(trimmed)
-        }
-        return (
-            integer(systolicText),
-            integer(diastolicText),
-            number(uricAcidText),
-            number(redBloodCellText),
-            number(potassiumText),
-            number(phosphorusText),
-            number(upcrText),
-            number(urineProteinText)
+        (
+            parseInteger(systolicText),
+            parseInteger(diastolicText),
+            parseNumber(uricAcidText),
+            parseNumber(redBloodCellText),
+            parseNumber(potassiumText),
+            parseNumber(phosphorusText),
+            parseNumber(upcrText),
+            parseNumber(urineProteinText)
         )
     }
 
@@ -216,19 +213,23 @@ final class CalculatorViewModel {
     }
 
     var optionalFilledCount: Int {
-        // 仅统计能被解析的填写项，与保存逻辑一致。
-        guard let metrics = optionalMetricsInput else {
-            let p = parsedOptionals
-            var count = 0
-            if p.uricAcid != nil { count += 1 }
-            if p.rbc != nil { count += 1 }
-            if p.potassium != nil { count += 1 }
-            if p.phosphorus != nil { count += 1 }
-            if p.upcr != nil { count += 1 }
-            if p.urineProtein != nil { count += 1 }
-            return count
+        // 仅统计能被解析的填写项，与保存逻辑一致；
+        // 血压校验失败时不计入血压项（此时保存按钮不可用）
+        let p = parsedOptionals
+        let input = OptionalMetricsInput(
+            systolicBP: p.systolic,
+            diastolicBP: p.diastolic,
+            uricAcid: p.uricAcid,
+            redBloodCell: p.rbc,
+            potassium: p.potassium,
+            phosphorus: p.phosphorus,
+            urineProteinCreatinineRatio: p.upcr,
+            urineProteinQuantitative: p.urineProtein
+        )
+        if bloodPressureErrorText != nil, input.hasBloodPressurePair {
+            return input.filledCount - 1
         }
-        return metrics.filledCount
+        return input.filledCount
     }
 
     /// 补充状态文案：本次会话已保存 → “补充至 YYYY-MM-DD”；否则提示先保存。

@@ -247,4 +247,21 @@ struct RecordStoreTests {
         #expect(entries[0].valueText == "128/76 mmHg")
         #expect(entries[1].valueText == "390 μmol/L")
     }
+
+    /// 回归：≥100 的非整数不得显示为科学计数法；<100 的两位小数保留原样
+    @Test func filledMetricEntriesFormatsLargeDecimalsAsIntegers() throws {
+        let store = try makeStore()
+        let input = makeInput()
+        _ = try store.createRecord(
+            input: input,
+            result: try EGFRCalculator.calculate(input),
+            measuredOn: DayDate.today,
+            optionals: OptionalMetricsInput(uricAcid: 392.5, potassium: 4.25, urineProteinCreatinineRatio: 0.15)
+        )
+        let entries = store.records[0].filledMetricEntries
+        #expect(entries.map(\.name) == ["尿酸", "钾", "尿蛋白肌酐比值"])
+        #expect(entries[0].valueText == "393 μmol/L")
+        #expect(entries[1].valueText == "4.2 mmol/L")
+        #expect(entries[2].valueText == "0.15 g/g.Cr")
+    }
 }

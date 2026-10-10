@@ -1,5 +1,42 @@
 # PROGRESS.md
 
+## 更新记录：A2/A3 决策——备份遗物保留供未来导入（2026-10-10·六）
+
+- 用户拍板：`RecordStore.replaceAll`+`StorageError.replaceFailed`、`DayDate.isoDayString`/`date(fromISODay:)` **保留**，作为未来导入功能的基础，不当死代码清除。
+- 决策已固化三处：AGENTS.md「既定交互/设计决策」节（明确勿删）、两处代码 doc 注释（标注刻意保留+日期）。
+- 纯文档/注释变更，构建通过。至此审查报告全部条目闭环（A1/A4/A5 已清、D 已修、B6–B11 已简、A2/A3 保留）。
+
+## 更新记录：B6–B11 简化重构（行为/视觉不变）（2026-10-10·五）
+
+- B6 数字解析去重：`CalculatorViewModel` 三处重复的 trim/空判/逗号转点收拢为文件级 `parseInteger`/`parseNumber`。
+- B7 `optionalFilledCount` 复用 `OptionalMetricsInput.filledCount`；血压校验失败时减去血压项，与原两分支语义逐点等价。
+- B8 `RecordStore` 五处 save/rollback/log/throw/reload 样板收拢为私有 `performSave(onFailure:logKey:)`（日志文案、错误枚举、回滚/重载时序均保持原样；replaceAll 的 delete 失败分支独立保留）。
+- B9 `OptionalMetricsInput` 删手写 19 行全默认 init，属性改 `= nil` 用合成 init（签名与调用点不变）。
+- B10 `PrimaryButtonStyle` 删从未使用的 `filled` 参数（无调用点传 false，主路径渲染逐字节一致）。
+- B11 `SeedData` 两分支重复的 RecordModel 构造合一，same-date 分支改为事后赋可选指标。
+- 验证：全量 41 单测 + 14 UI 通过；计算页截图 `b-refactor-calculator.png` 像素验证主按钮绿带满宽、Tab 选中图标正常（视觉无变化）。净删约 90 行。
+
+## 更新记录：D 修复——趋势卡指标数值科学计数法（2026-10-10·四）
+
+- 审查报告的 D 项落地，**影响面更正**：`formatNumber` 的整数分支本就正确（390 → "390"，现有测试覆盖），科学计数法只出现在「非整数且 ≥100」（如尿酸输入 392.5 → "3.9e+02"）——上轮报告"必然踩中"说法过头，实为小数点键入才触发。
+- 修复（RecordModel.formatNumber）：四舍五入后 ≥100 一律取整展示（392.5 → "393"）；整数与 <100 的小数（4.25 → "4.2"、0.15 → "0.15"）行为不变。
+- 新增回归测试 `filledMetricEntriesFormatsLargeDecimalsAsIntegers`（392.5/4.25/0.15 三档断言）；单测现为 41 个。
+- 验证：全量 41 单测 + 14 UI 通过。
+
+## 更新记录：零风险清理 A1/A4/A5（2026-10-10·三）
+
+- 全项目代码审查（只报告）后按用户指示落地三项零风险清理：①删 `RecordModel.optionalMetricsInput` 死属性（全工程零引用）；②删 `unitChips` 上方描述已废除“透明 DatePicker”方案的失实注释；③`BiologicalSex`/`CreatinineUnit` 注释由“用于备份协议”更正为“用于本机 SwiftData 存储”。
+- 审查报告其余待决项（用户未批）：A2 `replaceAll`+`replaceFailed` 备份遗物、A3 `DayDate` ISO 日字符串遗物（涉及 AGENTS.md 日期规则）、B 类简化、D 类 bug——趋势图指标卡尿酸因 `%.2g` 显示科学计数法（390→"3.9e+02"）。
+- 验证：全量 40 单测 + 14 UI 通过。
+
+## 更新记录：修复真机闪退——保存补充信息必崩（2026-10-10·二）
+
+- 现象：真机点「保存补充信息」App 闪退。UI 探针 `testSupplementSaveFlow`（本轮新增，此前该路径零 UI 覆盖）在模拟器复现同崩溃，拿到日志：`Thread 7 (com.apple.SwiftUI.AsyncRenderer) _dispatch_assert_queue_fail → closure #1 in Palette.dynamic(light:dark:)`。
+- 根因：`Theme.swift` 的 `Palette.dynamic` 用 `UIColor { traits in ... }` 建动态色，闭包在工程默认 MainActor 隔离下主线程专属；SwiftUI 会在后台 AsyncRenderer 线程解析颜色（点保存→视图状态变化→颜色重解析即触发），Swift 6 运行时隔离检查直接 SIGTRAP。属时序竞态，故时有时无、历轮测试漏网。
+- 修复：`dynamic`/`uiColor` 两个纯函数标 `nonisolated`（dynamicProvider 本就允许任意线程调用），其余不动。
+- 验证：探针红→绿（修复后 3/3 通过）；全量测试通过（UI 现为 14 个，含新探针）；已重新构建安装真机。
+- 附带确认：全工程仅 Theme.swift 一处 `UIColor {` 动态色，无同类隐患；用户 Mac 常驻 Loon VPN——此前本机域名解析查出 198.0.x.x 假地址即其 DNS 拦截所致。
+
 ## 更新记录：ICP 备案通过 + 网页三件套 + App 内备案号（2026-10-10）
 
 - ICP 备案（App 备案，个人主体，江苏管局，订单 2031850680766）**管局审核通过**，备案号「苏ICP备2026069169号-4A」。iOS 特征信息走 2024 新流程：Bundle ID + Apple Distribution 证书公钥/SHA-1（无需数字 Apple ID）；发布证书经 Xcode 创建（SHA-1 `5A:23:B2:C3:7B:07:C6:13:5B:21:7F:B7:05:AA:1B:A6:C6:8D:E0:BE`）。

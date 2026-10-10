@@ -20,17 +20,15 @@ extension View {
 
 /// 主按钮：主绿填充、白字，按压时轻微变淡。
 struct PrimaryButtonStyle: ButtonStyle {
-    var filled: Bool = true
-
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.body.weight(.semibold))
-            .foregroundStyle(filled ? AnyShapeStyle(Color.white) : AnyShapeStyle(Palette.primary))
+            .foregroundStyle(Color.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(filled ? AnyShapeStyle(Palette.primary) : AnyShapeStyle(Palette.primarySoft))
+                    .fill(Palette.primary)
             )
             .opacity(configuration.isPressed ? 0.82 : 1)
             .animation(.smooth(duration: 0.12), value: configuration.isPressed)

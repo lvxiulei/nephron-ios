@@ -2,8 +2,9 @@ import Foundation
 
 /// 日期统一策略：
 /// - 语义上检验日期只有“天”，存储为当天在设备时区的起点（startOfDay）；
-/// - 备份协议使用稳定的 ISO 日字符串（yyyy-MM-dd），不携带时分秒与时区偏移，
-///   避免跨时区导入导出时日期偏移；
+/// - isoDayString / date(fromISODay:) 是稳定的 yyyy-MM-dd 编解码（不携带时分秒与
+///   时区偏移，避免跨时区导入导出时日期偏移）——当前 App 内无调用，**刻意保留
+///   供未来导入功能复用，勿删**（2026-10-10 用户决策）；
 /// - 展示使用 zh_CN 格式。
 nonisolated enum DayDate {
     /// Gregorian 日历 + 设备时区；locale 仅影响格式化，不影响天数计算。

@@ -53,32 +53,21 @@ enum SeedData {
             let measuredOn = DayDate.calendar.date(byAdding: .day, value: -seed.daysAgo, to: DayDate.today) ?? DayDate.today
             let createdAt = DayDate.calendar.date(byAdding: .minute, value: index * 5, to: measuredOn.addingTimeInterval(9 * 3600))
                 ?? measuredOn
-            let record: RecordModel
+            let record = RecordModel(
+                measuredOn: measuredOn,
+                createdAt: createdAt,
+                age: seed.age,
+                sex: seed.sex,
+                creatinine: seed.creatinine,
+                creatinineUnit: seed.unit,
+                egfr: result.roundedValue
+            )
             if index == 1 && arguments.contains("-uitest-seed-same-date") {
                 // 第二条同日期记录补充可选指标，便于截图展示已填写项目。
-                record = RecordModel(
-                    measuredOn: measuredOn,
-                    createdAt: createdAt,
-                    age: seed.age,
-                    sex: seed.sex,
-                    creatinine: seed.creatinine,
-                    creatinineUnit: seed.unit,
-                    egfr: result.roundedValue,
-                    systolicBP: 128,
-                    diastolicBP: 76,
-                    uricAcid: 390,
-                    potassium: 4.2
-                )
-            } else {
-                record = RecordModel(
-                    measuredOn: measuredOn,
-                    createdAt: createdAt,
-                    age: seed.age,
-                    sex: seed.sex,
-                    creatinine: seed.creatinine,
-                    creatinineUnit: seed.unit,
-                    egfr: result.roundedValue
-                )
+                record.systolicBP = 128
+                record.diastolicBP = 76
+                record.uricAcid = 390
+                record.potassium = 4.2
             }
             context.insert(record)
         }

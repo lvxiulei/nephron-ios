@@ -89,21 +89,6 @@ final class RecordModel {
         if let value = metrics.urineProteinQuantitative { urineProteinQuantitative = value }
     }
 
-    /// 用可选指标输入整组覆盖（保存补充信息时使用，未填写的项清空？——
-    /// 产品语义是“补充”，因此仍按合并处理，见 mergeOptionalMetrics）。
-    var optionalMetricsInput: OptionalMetricsInput {
-        OptionalMetricsInput(
-            systolicBP: systolicBP,
-            diastolicBP: diastolicBP,
-            uricAcid: uricAcid,
-            redBloodCell: redBloodCell,
-            potassium: potassium,
-            phosphorus: phosphorus,
-            urineProteinCreatinineRatio: urineProteinCreatinineRatio,
-            urineProteinQuantitative: urineProteinQuantitative
-        )
-    }
-
     /// 已填写可选指标的展示条目，仅包含有值的项目。
     var filledMetricEntries: [OptionalMetricEntry] {
         var entries: [OptionalMetricEntry] = []
@@ -132,8 +117,11 @@ final class RecordModel {
     }
 
     private func formatNumber(_ value: Double) -> String {
-        if value.rounded() == value {
-            return String(Int(value))
+        // ≥100 的非整数（如尿酸 392.5 μmol/L）取整展示：
+        // %.2g 对三位数会输出科学计数法（392.5 → "3.9e+02"）
+        let rounded = value.rounded()
+        if rounded == value || abs(rounded) >= 100 {
+            return String(Int(rounded))
         }
         return String(format: "%.2g", value)
     }
