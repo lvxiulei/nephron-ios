@@ -216,6 +216,52 @@ final class NephronIOSUITests: XCTestCase {
         }
     }
 
+    /// 计算前即可进入来源；验证三种显示模式、四条引用及关闭返回。
+    @MainActor func testMedicalReferencesAccessAndReturn() throws {
+        for (mode, arguments) in [("light", [String]()), ("dark", ["-uitest-force-dark"]), ("xxxl", ["-uitest-force-large-text"])] {
+            let app = launchClean(arguments)
+            let entry = app.buttons["medical.references.open"]
+            XCTAssertTrue(entry.waitForExistence(timeout: 8))
+            scrollToVisible(entry, in: app)
+            let calculatorShot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            calculatorShot.name = "references-calculator-\(mode)"
+            calculatorShot.lifetime = .keepAlways
+            add(calculatorShot)
+            entry.tap()
+            XCTAssertTrue(app.navigationBars["公式与参考来源"].waitForExistence(timeout: 5))
+            let formulaShot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            formulaShot.name = "references-formula-\(mode)"
+            formulaShot.lifetime = .keepAlways
+            add(formulaShot)
+            for id in ["1", "2", "3", "4"] {
+                let link = app.links["medical.reference.\(id)"]
+                scrollToVisible(link, in: app)
+                XCTAssertTrue(link.isHittable, "引用 \(id) 应可见并可点击")
+                if id == "1" || id == "4" {
+                    let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+                    shot.name = "references-source-\(id)-\(mode)"
+                    shot.lifetime = .keepAlways
+                    add(shot)
+                }
+            }
+            app.buttons["medical.references.done"].tap()
+            XCTAssertTrue(entry.waitForExistence(timeout: 3))
+            app.terminate()
+        }
+    }
+
+    /// 了解页的引用入口不依赖公式卡片是否展开。
+    @MainActor func testKnowledgeReferencesAccess() throws {
+        let app = launchClean(["-uitest-tab=2"])
+        let entry = app.buttons["medical.references.open"]
+        XCTAssertTrue(entry.waitForExistence(timeout: 8))
+        scrollToVisible(entry, in: app)
+        entry.tap()
+        XCTAssertTrue(app.navigationBars["公式与参考来源"].waitForExistence(timeout: 5))
+        app.buttons["medical.references.done"].tap()
+        XCTAssertTrue(app.buttons["knowledge.formula.toggle"].exists)
+    }
+
     /// 检验日期：点击日期块弹出日历面板，选择后可完成关闭。
     @MainActor func testDatePickerOpensAndCloses() throws {
         let app = launchClean(["-uitest-prefill"])

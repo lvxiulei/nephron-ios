@@ -74,6 +74,9 @@ private struct CalculatorContent: View {
                     inputCard
                     if let result = viewModel.displayResult {
                         resultCard(result: result)
+                    }
+                    MedicalReferenceCard()
+                    if viewModel.displayResult != nil {
                         optionalMetricsCard
                     }
                     bottomDisclaimer

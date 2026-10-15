@@ -8,17 +8,17 @@ struct KnowledgeView: View {
         (
             "chart.line.downtrend.xyaxis",
             "比较趋势，比盯单次更有用",
-            "肾功能的变化方向，比某一次的数值更值得留意。"
+            "连续的 eGFR 结果有助于了解变化，比只看一次估算更有参考价值。[2]"
         ),
         (
             "waveform.path.ecg",
             "肌酐会受很多因素影响",
-            "饮食、运动、药物甚至脱水，都可能让同一天的肌酐出现波动。"
+            "饮食、肌肉量和部分药物等因素，都可能影响血肌酐或估算的准确性。[3]"
         ),
         (
             "doc.text.magnifyingglass",
             "还需要结合尿检与病史",
-            "尿蛋白、尿红细胞等检查与既往病史，是医生判断的重要信息。"
+            "医生还需结合尿白蛋白等检查及既往结果评估肾脏情况。[2, 4]"
         ),
     ]
 
@@ -29,6 +29,7 @@ struct KnowledgeView: View {
                 estimateCard
                 tipsCard
                 formulaCard
+                MedicalReferenceCard()
                 bottomNotice
             }
             .padding(.horizontal, 16)
@@ -55,7 +56,7 @@ struct KnowledgeView: View {
             Text("它是“估算值”")
                 .font(.headline)
                 .foregroundStyle(Palette.primary)
-            Text("eGFR 根据年龄、生物学性别和血肌酐估算；不是直接测得的 GFR，也不是一次结果就能给出的诊断。")
+            Text("eGFR 根据年龄、生物学性别和血肌酐估算；不是直接测得的 GFR，也不是一次结果就能给出的诊断。[1–3]")
                 .font(.subheadline)
                 .foregroundStyle(Palette.primaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -121,22 +122,22 @@ struct KnowledgeView: View {
 
                 if isFormulaExpanded {
                     VStack(alignment: .leading, spacing: 12) {
-                        formulaRow(title: "适用范围", body: "18 岁及以上成人的稳定状态估算；不适用于急性肾损伤、孕妇、截肢或极端肌肉量人群。")
-                        formulaRow(title: "单位换算", body: "若检验单使用 μmol/L，计算前会除以 88.4 换算为 mg/dL；血肌酐合理范围为换算后 10–2000 μmol/L。")
-                        formulaRow(title: "结果可能不同", body: "不同医院可能使用 2009 版 CKD-EPI、MDRD 或包含胱抑素 C 的公式，数值存在差异属于正常现象。")
+                        formulaRow(title: "适用范围", body: MedicalReference.applicability)
+                        formulaRow(title: "单位换算", body: MedicalReference.conversion)
+                        formulaRow(title: "结果可能不同", body: "不同公式可能给出不同结果；本工具未使用胱抑素 C，结果需结合医生评估理解。[2]")
 
                         VStack(alignment: .leading, spacing: 6) {
                             Text("公式表达式")
                                 .font(.footnote.weight(.semibold))
                                 .foregroundStyle(Palette.primaryText)
-                            Text("eGFR = 142 × min(Scr/κ, 1)^α × max(Scr/κ, 1)^-1.200 × 0.9938^年龄 × 性别系数")
+                            Text(MedicalReference.formula)
                                 .font(.footnote.monospaced())
                                 .foregroundStyle(Palette.primaryText)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .padding(10)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(Palette.fieldBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                            Text("女性：κ = 0.7，α = -0.241，性别系数 = 1.012\n男性：κ = 0.9，α = -0.302，性别系数 = 1")
+                            Text(MedicalReference.coefficients)
                                 .font(.caption)
                                 .foregroundStyle(Palette.secondaryText)
                                 .fixedSize(horizontal: false, vertical: true)
